@@ -3,12 +3,15 @@
 namespace Tests\Feature;
 
 use App\Enums\ReminderStatus;
+use App\Jobs\SendReminderEmail;
 use App\Models\Reminder;
 use App\Models\ReminderDate;
 use App\Models\User;
 use App\Notifications\ReminderDue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Queue;
+use RuntimeException;
 use Tests\TestCase;
 
 class ReminderTest extends TestCase
@@ -370,6 +373,35 @@ class ReminderTest extends TestCase
             });
         }
         Notification::assertSentOnDemandTimes(ReminderDue::class, 2);
+    }
+
+    public function test_each_email_is_queued_as_its_own_job(): void
+    {
+        Queue::fake();
+
+        $reminder = Reminder::factory()->has(ReminderDate::factory()->final()->due(), 'dates')->create();
+        $reminder->syncRecipients(['a@example.com', 'b@example.com']);
+        $date = $reminder->finalDate;
+
+        $this->artisan('reminders:send')->assertSuccessful();
+
+        Queue::assertPushed(SendReminderEmail::class, 3);
+        foreach ([null, 'a@example.com', 'b@example.com'] as $email) {
+            Queue::assertPushed(SendReminderEmail::class, fn (SendReminderEmail $job) => $job->date->is($date) && $job->email === $email);
+        }
+        $this->assertSame(ReminderStatus::Sent, $date->fresh()->status);
+    }
+
+    public function test_a_job_that_finally_fails_marks_its_date_failed(): void
+    {
+        $reminder = Reminder::factory()->has(ReminderDate::factory()->final()->due(), 'dates')->create();
+        $date = $reminder->finalDate;
+        $date->update(['status' => ReminderStatus::Sent]);
+
+        (new SendReminderEmail($date, 'a@example.com'))->failed(new RuntimeException('SMTP down'));
+
+        $this->assertSame(ReminderStatus::Failed, $date->fresh()->status);
+        $this->assertSame(ReminderStatus::Failed, $reminder->fresh()->status());
     }
 
     public function test_sent_dates_are_not_sent_twice(): void

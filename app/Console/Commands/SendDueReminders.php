@@ -3,67 +3,59 @@
 namespace App\Console\Commands;
 
 use App\Enums\ReminderStatus;
+use App\Jobs\SendReminderEmail;
 use App\Models\ReminderDate;
-use App\Notifications\ReminderDue;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Notification;
 use Throwable;
 
 class SendDueReminders extends Command
 {
     protected $signature = 'reminders:send';
 
-    protected $description = 'Send every pending notification date whose time has come';
+    protected $description = 'Queue one email job per person for every pending notification date whose time has come';
 
     public function handle(): int
     {
-        $sent = 0;
-        $failed = 0;
+        $dates = 0;
+        $jobs = 0;
 
         ReminderDate::due()
-            ->with(['reminder.user', 'reminder.recipients', 'reminder.finalDate'])
-            ->chunkById(100, function ($dates) use (&$sent, &$failed) {
-                foreach ($dates as $date) {
-                    if ($this->deliver($date)) {
-                        $date->update(['status' => ReminderStatus::Sent, 'sent_at' => now()]);
-                        $sent++;
-                    } else {
-                        $date->update(['status' => ReminderStatus::Failed]);
-                        $failed++;
-                    }
+            ->with(['reminder.recipients'])
+            ->chunkById(100, function ($chunk) use (&$dates, &$jobs) {
+                foreach ($chunk as $date) {
+                    $jobs += $this->dispatchFor($date);
+                    $dates++;
                 }
             });
 
-        $this->info("Sent {$sent} notification(s), {$failed} failed.");
+        $this->info("Queued {$jobs} email(s) for {$dates} notification date(s).");
 
         return self::SUCCESS;
     }
 
     /**
-     * Notify the owner and every extra recipient. One failed delivery doesn't stop
-     * the others, but marks the date as failed.
+     * Queue a separate job for the owner and for every extra recipient. The date is
+     * marked sent first so it isn't picked up again; any job that finally fails
+     * flips it to failed.
      */
-    private function deliver(ReminderDate $date): bool
+    private function dispatchFor(ReminderDate $date): int
     {
-        $reminder = $date->reminder;
-        $notification = new ReminderDue($date);
-        $targets = [$reminder->user];
+        $date->update(['status' => ReminderStatus::Sent, 'sent_at' => now()]);
 
-        foreach ($reminder->recipients as $recipient) {
-            $targets[] = Notification::route($reminder->channel->driver(), $recipient->email);
-        }
+        $jobs = [
+            new SendReminderEmail($date),
+            ...$date->reminder->recipients->map(fn ($recipient) => new SendReminderEmail($date, $recipient->email)),
+        ];
 
-        $delivered = true;
-
-        foreach ($targets as $target) {
+        foreach ($jobs as $job) {
             try {
-                $target->notify($notification);
+                dispatch($job);
             } catch (Throwable $e) {
+                // Only reached on the sync driver, where the job has already marked the date failed.
                 report($e);
-                $delivered = false;
             }
         }
 
-        return $delivered;
+        return count($jobs);
     }
 }
