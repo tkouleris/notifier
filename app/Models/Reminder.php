@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 class Reminder extends Model
@@ -37,9 +38,30 @@ class Reminder extends Model
         'status' => ReminderStatus::class,
     ];
 
+    /**
+     * The most people a reminder can notify besides its owner.
+     */
+    public const MAX_RECIPIENTS = 3;
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function recipients(): HasMany
+    {
+        return $this->hasMany(ReminderRecipient::class);
+    }
+
+    /**
+     * Replace the extra recipients with the given email addresses.
+     *
+     * @param  array<int, string>  $emails
+     */
+    public function syncRecipients(array $emails): void
+    {
+        $this->recipients()->delete();
+        $this->recipients()->createMany(array_map(fn (string $email) => ['email' => $email], $emails));
     }
 
     /**

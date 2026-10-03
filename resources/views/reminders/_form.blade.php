@@ -26,6 +26,18 @@
 </select>
 @error('channel') <div class="error">{{ $message }}</div> @enderror
 
+@php($recipients = old('recipients', $reminder->recipients->pluck('email')->all()))
+<fieldset class="recipients">
+    <legend>Also notify <span class="muted">(optional, up to {{ \App\Models\Reminder::MAX_RECIPIENTS }} people)</span></legend>
+    @error('recipients') <div class="error">{{ $message }}</div> @enderror
+    @for ($i = 0; $i < \App\Models\Reminder::MAX_RECIPIENTS; $i++)
+        <label for="recipient-{{ $i }}" class="visually-hidden">Person {{ $i + 1 }} email</label>
+        <input id="recipient-{{ $i }}" type="email" name="recipients[{{ $i }}]" maxlength="255"
+               value="{{ $recipients[$i] ?? '' }}" placeholder="name@example.com" autocomplete="off">
+        @error('recipients.'.$i) <div class="error">{{ $message }}</div> @enderror
+    @endfor
+</fieldset>
+
 @if (! $reminder->exists && ! old('timezone'))
     <script>
         // New notifications default to the browser's timezone.

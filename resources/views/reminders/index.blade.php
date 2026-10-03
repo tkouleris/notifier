@@ -39,6 +39,9 @@
                                 @if ($reminder->message)
                                     <div class="muted">{{ \Illuminate\Support\Str::limit($reminder->message, 80) }}</div>
                                 @endif
+                                @if ($reminder->recipients->isNotEmpty())
+                                    <div class="muted">Also notifies {{ $reminder->recipients->pluck('email')->join(', ') }}</div>
+                                @endif
                             </td>
                             <td>
                                 {{ $reminder->localNotifyAt()->format('M j, Y H:i') }}

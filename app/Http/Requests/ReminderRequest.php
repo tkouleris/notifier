@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\ReminderChannel;
+use App\Models\Reminder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
@@ -15,6 +16,25 @@ class ReminderRequest extends FormRequest
         return true;
     }
 
+    /**
+     * Normalise the extra recipients and drop the blank fields, keeping the keys
+     * so errors still line up with the inputs they came from.
+     */
+    protected function prepareForValidation(): void
+    {
+        $recipients = $this->input('recipients');
+
+        if (! is_array($recipients)) {
+            return;
+        }
+
+        $recipients = array_map(fn ($email) => is_string($email) ? strtolower(trim($email)) : $email, $recipients);
+
+        $this->merge([
+            'recipients' => array_filter($recipients, fn ($email) => $email !== '' && $email !== null),
+        ]);
+    }
+
     public function rules(): array
     {
         return [
@@ -23,7 +43,35 @@ class ReminderRequest extends FormRequest
             'notify_at' => ['required', 'date_format:Y-m-d\TH:i'],
             'timezone' => ['required', 'timezone:all'],
             'channel' => ['required', Rule::enum(ReminderChannel::class)],
+            'recipients' => ['nullable', 'array', 'max:'.Reminder::MAX_RECIPIENTS],
+            'recipients.*' => [
+                'string',
+                'email',
+                'max:255',
+                'distinct',
+                Rule::notIn([strtolower($this->user()->email)]),
+            ],
         ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'recipients.max' => 'You can notify at most :max other people.',
+            'recipients.*.email' => 'Enter a valid email address.',
+            'recipients.*.distinct' => 'This email address is listed more than once.',
+            'recipients.*.not_in' => 'You are already notified; enter someone else\'s address.',
+        ];
+    }
+
+    /**
+     * The validated extra recipient email addresses.
+     *
+     * @return array<int, string>
+     */
+    public function recipientEmails(): array
+    {
+        return array_values($this->validated('recipients') ?? []);
     }
 
     public function withValidator(Validator $validator): void
