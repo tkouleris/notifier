@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ReminderController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -32,7 +33,13 @@ Route::get('/', function () {
 // Everything in this group requires a logged-in user with a verified email.
 // Unverified users are redirected to the verification notice page.
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::view('/home', 'home')->name('home');
+    // Old entry point; the notification list is now the home page.
+    Route::redirect('/home', '/notifications')->name('home');
+
+    Route::resource('notifications', ReminderController::class)
+        ->except('show')
+        ->parameters(['notifications' => 'reminder'])
+        ->names('reminders');
 });
 
 require __DIR__ . '/auth.php';

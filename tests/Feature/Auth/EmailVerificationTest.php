@@ -20,7 +20,7 @@ class EmailVerificationTest extends TestCase
     {
         $user = User::factory()->unverified()->create();
 
-        $this->actingAs($user)->get('/home')->assertRedirect(route('verification.notice'));
+        $this->actingAs($user)->get('/notifications')->assertRedirect(route('verification.notice'));
     }
 
     public function test_unverified_user_is_sent_to_verification_page_after_login(): void
@@ -28,9 +28,9 @@ class EmailVerificationTest extends TestCase
         $user = User::factory()->unverified()->create();
 
         $this->post('/login', ['email' => $user->email, 'password' => 'password'])
-            ->assertRedirect('/home');
+            ->assertRedirect('/notifications');
 
-        $this->get('/home')->assertRedirect(route('verification.notice'));
+        $this->get('/notifications')->assertRedirect(route('verification.notice'));
         $this->get(route('verification.notice'))->assertOk()->assertSee('needs to be verified');
     }
 
@@ -38,14 +38,14 @@ class EmailVerificationTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $this->actingAs($user)->get('/home')->assertOk()->assertSee($user->name);
+        $this->actingAs($user)->get('/notifications')->assertOk()->assertSee($user->email);
     }
 
     public function test_verified_user_is_redirected_away_from_verification_page(): void
     {
         $user = User::factory()->create();
 
-        $this->actingAs($user)->get(route('verification.notice'))->assertRedirect('/home');
+        $this->actingAs($user)->get(route('verification.notice'))->assertRedirect('/notifications');
     }
 
     public function test_verification_email_failure_is_shown_on_resend(): void
@@ -76,7 +76,7 @@ class EmailVerificationTest extends TestCase
 
         Event::assertDispatched(Verified::class);
         $this->assertTrue($user->fresh()->hasVerifiedEmail());
-        $response->assertRedirect('/home?verified=1');
+        $response->assertRedirect('/notifications?verified=1');
     }
 
     public function test_email_is_not_verified_with_invalid_hash(): void

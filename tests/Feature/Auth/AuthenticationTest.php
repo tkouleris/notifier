@@ -20,7 +20,7 @@ class AuthenticationTest extends TestCase
         $user = User::factory()->create();
 
         $this->post('/login', ['email' => $user->email, 'password' => 'password'])
-            ->assertRedirect('/home');
+            ->assertRedirect('/notifications');
 
         $this->assertAuthenticatedAs($user);
     }
