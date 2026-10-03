@@ -18,6 +18,7 @@ class ExampleTest extends TestCase
             ->assertSee('How it works')
             ->assertSee('images/logo-full.png')
             ->assertSee('images/logo-mark.png')
+            ->assertSee('rel="icon" href="'.asset('favicon.ico').'"', false)
             ->assertSee('href="'.route('register').'"', false)
             ->assertSee('href="'.route('login').'"', false);
     }
