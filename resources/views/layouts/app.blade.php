@@ -95,6 +95,7 @@
         .theme-switch button[aria-pressed=true] { background: var(--primary-bg); color: var(--primary-text); cursor: default; }
         @media (max-width: 600px) { main { margin: 1rem; padding: 1.25rem; } .navbar { padding: .75rem 1rem; } .navbar-end { margin-left: 0; } }
     </style>
+    @stack('styles')
 </head>
 <body>
 @auth
