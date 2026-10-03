@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ReminderController;
+use App\Http\Controllers\ThemeController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -29,6 +30,9 @@ Route::get('/test-mail', function () {
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Unverified users can switch themes too, so this only needs a login.
+Route::put('/theme', [ThemeController::class, 'update'])->middleware('auth')->name('theme.update');
 
 // Everything in this group requires a logged-in user with a verified email.
 // Unverified users are redirected to the verification notice page.

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Theme;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -22,6 +23,16 @@ class User extends Authenticatable implements MustVerifyEmail
         'name',
         'email',
         'password',
+        'theme',
+    ];
+
+    /**
+     * Mirrors the column default so new, unrefreshed users have a theme too.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'theme' => 'light',
     ];
 
     /**
@@ -41,6 +52,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'theme' => Theme::class,
     ];
 
     /**

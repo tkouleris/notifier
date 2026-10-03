@@ -1,42 +1,100 @@
+@php($theme = auth()->user()?->theme ?? \App\Enums\Theme::Light)
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="{{ $theme->value }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('title') · {{ config('app.name') }}</title>
     <style>
-        body { font-family: system-ui, sans-serif; background: #f4f5f7; margin: 0; color: #1f2937; }
-        main { max-width: 420px; margin: 4rem auto; background: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+        :root {
+            color-scheme: light;
+            --bg: #f4f5f7;
+            --surface: #fff;
+            --text: #1f2937;
+            --muted: #6b7280;
+            --border: #d1d5db;
+            --divider: #e5e7eb;
+            --shadow: rgba(0,0,0,.1);
+            --primary-bg: #111827;
+            --primary-text: #fff;
+            --link: #2563eb;
+            --danger: #b91c1c;
+            --success-bg: #ecfdf5;
+            --success-text: #065f46;
+            --danger-bg: #fef2f2;
+            --danger-text: #991b1b;
+            --info-bg: #eff6ff;
+            --info-text: #1e40af;
+        }
+        [data-theme=dark] {
+            color-scheme: dark;
+            --bg: #0f1115;
+            --surface: #1a1d23;
+            --text: #e5e7eb;
+            --muted: #9ca3af;
+            --border: #374151;
+            --divider: #2a2f37;
+            --shadow: rgba(0,0,0,.5);
+            --primary-bg: #e5e7eb;
+            --primary-text: #111827;
+            --link: #60a5fa;
+            --danger: #f87171;
+            --success-bg: #052e22;
+            --success-text: #6ee7b7;
+            --danger-bg: #3b1212;
+            --danger-text: #fca5a5;
+            --info-bg: #172554;
+            --info-text: #93c5fd;
+        }
+        body { font-family: system-ui, sans-serif; background: var(--bg); margin: 0; color: var(--text); }
+        a { color: var(--link); }
+        main { max-width: 420px; margin: 4rem auto; background: var(--surface); padding: 2rem; border-radius: 8px; box-shadow: 0 1px 3px var(--shadow); }
         label { display: block; margin-top: 1rem; font-size: .9rem; }
-        input[type=text], input[type=email], input[type=password] { width: 100%; padding: .5rem; margin-top: .25rem; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 4px; }
-        button { margin-top: 1.25rem; padding: .55rem 1.1rem; background: #111827; color: #fff; border: 0; border-radius: 4px; cursor: pointer; }
-        .error { color: #b91c1c; font-size: .85rem; margin-top: .25rem; }
-        .status { background: #ecfdf5; color: #065f46; padding: .75rem; border-radius: 4px; margin-bottom: 1rem; }
-        .error-box { background: #fef2f2; color: #991b1b; padding: .75rem; border-radius: 4px; margin-bottom: 1rem; }
-        .muted { color: #6b7280; font-size: .9rem; }
+        input[type=text], input[type=email], input[type=password], input[type=datetime-local], textarea, select { width: 100%; padding: .5rem; margin-top: .25rem; box-sizing: border-box; border: 1px solid var(--border); border-radius: 4px; font: inherit; background: var(--surface); color: var(--text); }
+        button { margin-top: 1.25rem; padding: .55rem 1.1rem; background: var(--primary-bg); color: var(--primary-text); border: 0; border-radius: 4px; cursor: pointer; }
+        .error { color: var(--danger); font-size: .85rem; margin-top: .25rem; }
+        .status { background: var(--success-bg); color: var(--success-text); padding: .75rem; border-radius: 4px; margin-bottom: 1rem; }
+        .error-box { background: var(--danger-bg); color: var(--danger-text); padding: .75rem; border-radius: 4px; margin-bottom: 1rem; }
+        .muted { color: var(--muted); font-size: .9rem; }
         main.wide { max-width: 860px; }
-        textarea, select, input[type=datetime-local] { width: 100%; padding: .5rem; margin-top: .25rem; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 4px; font: inherit; }
-        a.button { display: inline-block; padding: .55rem 1.1rem; background: #111827; color: #fff; border-radius: 4px; text-decoration: none; }
-        button.link { margin: 0; padding: 0; background: none; color: #2563eb; font: inherit; }
-        button.link.danger { color: #b91c1c; }
+        a.button { display: inline-block; padding: .55rem 1.1rem; background: var(--primary-bg); color: var(--primary-text); border-radius: 4px; text-decoration: none; }
+        button.link { margin: 0; padding: 0; background: none; color: var(--link); font: inherit; }
+        button.link.danger { color: var(--danger); }
         .header { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
         .header h1 { margin: 0; }
         .table-wrap { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
-        th, td { text-align: left; padding: .65rem .5rem; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
-        th { font-size: .8rem; text-transform: uppercase; color: #6b7280; }
+        th, td { text-align: left; padding: .65rem .5rem; border-bottom: 1px solid var(--divider); vertical-align: top; }
+        th { font-size: .8rem; text-transform: uppercase; color: var(--muted); }
         .actions { white-space: nowrap; }
         .actions form { display: inline; margin-left: .75rem; }
         .badge { display: inline-block; padding: .15rem .5rem; border-radius: 999px; font-size: .8rem; }
-        .badge-pending { background: #eff6ff; color: #1e40af; }
-        .badge-sent { background: #ecfdf5; color: #065f46; }
-        .badge-failed { background: #fef2f2; color: #991b1b; }
+        .badge-pending { background: var(--info-bg); color: var(--info-text); }
+        .badge-sent { background: var(--success-bg); color: var(--success-text); }
+        .badge-failed { background: var(--danger-bg); color: var(--danger-text); }
         .logout { margin-top: 2rem; display: flex; gap: 1rem; align-items: center; }
-        @media (max-width: 600px) { main { margin: 1rem; padding: 1.25rem; } }
+        .theme-switch { display: flex; justify-content: flex-end; margin: -1rem -1rem 1rem 0; }
+        .theme-switch fieldset { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; padding: 2px; margin: 0; }
+        .theme-switch button { margin: 0; padding: .2rem .75rem; border-radius: 999px; font-size: .8rem; background: none; color: var(--muted); }
+        .theme-switch button[aria-pressed=true] { background: var(--primary-bg); color: var(--primary-text); cursor: default; }
+        @media (max-width: 600px) { main { margin: 1rem; padding: 1.25rem; } .theme-switch { margin: 0 0 1rem; } }
     </style>
 </head>
 <body>
 <main class="@yield('main_class')">
+    @auth
+        <form method="POST" action="{{ route('theme.update') }}" class="theme-switch">
+            @csrf
+            @method('PUT')
+            <fieldset aria-label="Color theme">
+                @foreach (\App\Enums\Theme::cases() as $option)
+                    <button type="submit" name="theme" value="{{ $option->value }}"
+                            aria-pressed="{{ $theme === $option ? 'true' : 'false' }}">{{ $option->label() }}</button>
+                @endforeach
+            </fieldset>
+        </form>
+    @endauth
+
     @yield('content')
 </main>
 </body>
