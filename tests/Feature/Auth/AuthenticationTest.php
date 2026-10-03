@@ -12,7 +12,7 @@ class AuthenticationTest extends TestCase
 
     public function test_login_screen_can_be_rendered(): void
     {
-        $this->get('/login')->assertOk();
+        $this->get('/login')->assertOk()->assertSee('images/logo-full.png');
     }
 
     public function test_user_can_log_in_with_valid_credentials(): void

@@ -83,6 +83,8 @@
         .navbar { display: flex; flex-wrap: wrap; gap: .75rem 1.5rem; align-items: center; padding: .75rem 1.5rem; background: var(--surface); border-bottom: 1px solid var(--divider); }
         .navbar .brand, .brand { display: inline-flex; align-items: center; gap: .5rem; font-weight: 600; color: var(--text); text-decoration: none; }
         .brand img { border-radius: 6px; }
+        .auth-logo { display: block; width: max-content; margin: 0 auto 1.25rem; }
+        .auth-logo img { display: block; border-radius: 12px; }
         .navbar ul { display: flex; flex-wrap: wrap; gap: 1rem; list-style: none; margin: 0; padding: 0; }
         .navbar ul a { color: var(--muted); text-decoration: none; }
         .navbar ul a:hover, .navbar ul a[aria-current=page] { color: var(--text); }

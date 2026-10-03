@@ -15,7 +15,7 @@ class RegistrationTest extends TestCase
 
     public function test_registration_screen_can_be_rendered(): void
     {
-        $this->get('/register')->assertOk();
+        $this->get('/register')->assertOk()->assertSee('images/logo-full.png');
     }
 
     public function test_new_user_is_registered_and_sent_a_verification_email(): void

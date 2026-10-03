@@ -3,6 +3,8 @@
 @section('title', 'Log in')
 
 @section('content')
+    @include('auth._logo')
+
     <h1>Log in</h1>
 
     <form method="POST" action="{{ route('login') }}">

@@ -3,6 +3,8 @@
 @section('title', 'Register')
 
 @section('content')
+    @include('auth._logo')
+
     <h1>Create an account</h1>
 
     <form method="POST" action="{{ route('register') }}">
