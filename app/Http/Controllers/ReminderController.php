@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\ReminderStatus;
 use App\Http\Requests\ReminderRequest;
 use App\Models\Reminder;
+use App\Models\ReminderDate;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,10 +15,16 @@ class ReminderController extends Controller
 {
     public function index(Request $request): View
     {
+        // Notifications with dates still to send come first, then by final date.
         $reminders = $request->user()->reminders()
-            ->with('recipients')
-            ->orderByRaw('case when status = ? then 0 else 1 end', [ReminderStatus::Pending->value])
-            ->orderBy('notify_at')
+            ->with(['recipients', 'dates'])
+            ->withExists(['dates as has_pending_dates' => fn ($query) => $query->where('status', ReminderStatus::Pending)])
+            ->addSelect(['final_at' => ReminderDate::select('notify_at')
+                ->whereColumn('reminder_id', 'reminders.id')
+                ->where('is_final', true)
+                ->limit(1)])
+            ->orderByDesc('has_pending_dates')
+            ->orderBy('final_at')
             ->paginate(15);
 
         return view('reminders.index', compact('reminders'));
@@ -32,6 +39,7 @@ class ReminderController extends Controller
     {
         DB::transaction(function () use ($request) {
             $reminder = $request->user()->reminders()->create($request->reminderData());
+            $reminder->syncDates($request->finalDate(), $request->earlyDates());
             $reminder->syncRecipients($request->recipientEmails());
         });
 
@@ -42,6 +50,8 @@ class ReminderController extends Controller
     {
         $this->authorize('update', $reminder);
 
+        $reminder->load('dates', 'recipients');
+
         return view('reminders.edit', compact('reminder'));
     }
 
@@ -49,12 +59,10 @@ class ReminderController extends Controller
     {
         $this->authorize('update', $reminder);
 
-        // A rescheduled reminder (always in the future, per validation) goes back in the queue.
+        // Saving replaces the whole schedule; every date (all in the future, per validation) is pending again.
         DB::transaction(function () use ($request, $reminder) {
-            $reminder->update($request->reminderData() + [
-                'status' => ReminderStatus::Pending,
-                'sent_at' => null,
-            ]);
+            $reminder->update($request->reminderData());
+            $reminder->syncDates($request->finalDate(), $request->earlyDates());
             $reminder->syncRecipients($request->recipientEmails());
         });
 

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\ReminderStatus;
 use App\Models\Reminder;
+use App\Models\ReminderDate;
 use App\Models\User;
 use App\Notifications\ReminderDue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -14,11 +15,13 @@ class ReminderTest extends TestCase
 {
     use RefreshDatabase;
 
+    private const FORMAT = 'Y-m-d\TH:i';
+
     private function validData(array $overrides = []): array
     {
         return $overrides + [
             'title' => 'Team dinner',
-            'notify_at' => now()->addDay()->format('Y-m-d\TH:i'),
+            'final_at' => now()->addDays(10)->format(self::FORMAT),
             'timezone' => 'UTC',
             'channel' => 'email',
         ];
@@ -48,18 +51,40 @@ class ReminderTest extends TestCase
             ->assertDontSee('Someone else');
     }
 
+    public function test_the_list_shows_every_date_of_a_notification(): void
+    {
+        $user = User::factory()->create();
+        $reminder = Reminder::factory()->for($user)->create();
+        $reminder->syncDates(now()->setDate(2030, 5, 10)->setTime(9, 0), [now()->setDate(2030, 5, 1)->setTime(9, 0)]);
+
+        $this->actingAs($user)->get('/notifications')
+            ->assertSeeInOrder(['Reminder:', 'May 1, 2030 09:00', 'Final:', 'May 10, 2030 09:00']);
+    }
+
     public function test_create_and_edit_forms_can_be_rendered(): void
     {
         $user = User::factory()->create();
-        $reminder = Reminder::factory()->for($user)->create([
-            'notify_at' => '2030-05-01 06:30:00',
-            'timezone' => 'Europe/Athens',
-        ]);
+        $reminder = Reminder::factory()->for($user)->create(['timezone' => 'Europe/Athens']);
+        $reminder->syncDates(now()->setDate(2030, 5, 10)->setTime(6, 30), [now()->setDate(2030, 5, 1)->setTime(6, 30)]);
 
         $this->actingAs($user)->get('/notifications/create')->assertOk()->assertSee('New notification');
         $this->actingAs($user)->get("/notifications/{$reminder->id}/edit")
             ->assertOk()
-            ->assertSee('value="2030-05-01T09:30"', false);
+            ->assertSee('name="final_at" required value="2030-05-10T09:30"', false)
+            ->assertSee('name="reminder_dates[0]" value="2030-05-01T09:30"', false);
+    }
+
+    public function test_the_edit_form_leaves_out_reminders_already_sent(): void
+    {
+        $user = User::factory()->create();
+        $reminder = Reminder::factory()->for($user)
+            ->has(ReminderDate::factory()->final(), 'dates')
+            ->has(ReminderDate::factory()->sent()->state(['notify_at' => now()->subDay()]), 'dates')
+            ->create();
+
+        $this->actingAs($user)->get("/notifications/{$reminder->id}/edit")
+            ->assertSee('name="reminder_dates[0]" value=""', false)
+            ->assertSee('Dates that have already been sent are not shown.');
     }
 
     public function test_a_notification_can_be_created_in_the_users_timezone(): void
@@ -67,30 +92,87 @@ class ReminderTest extends TestCase
         $user = User::factory()->create();
         $local = now('Europe/Athens')->addDay()->setTime(9, 30);
 
-        $this->actingAs($user)->post('/notifications', [
+        $this->actingAs($user)->post('/notifications', $this->validData([
             'title' => 'Dentist',
             'message' => 'Bring the papers',
-            'notify_at' => $local->format('Y-m-d\TH:i'),
+            'final_at' => $local->format(self::FORMAT),
             'timezone' => 'Europe/Athens',
-            'channel' => 'email',
-        ])->assertRedirect('/notifications');
+        ]))->assertRedirect('/notifications');
 
         $reminder = $user->reminders()->sole();
         $this->assertSame('Dentist', $reminder->title);
-        $this->assertTrue($reminder->notify_at->eq($local->copy()->utc()));
-        $this->assertSame(ReminderStatus::Pending, $reminder->status);
+
+        $date = $reminder->dates()->sole();
+        $this->assertTrue($date->is_final);
+        $this->assertTrue($date->notify_at->eq($local->copy()->utc()));
+        $this->assertSame(ReminderStatus::Pending, $date->status);
     }
 
-    public function test_a_notification_must_be_in_the_future(): void
+    public function test_a_notification_can_have_four_optional_reminders_before_the_final_date(): void
+    {
+        $user = User::factory()->create();
+        $final = now()->addDays(10)->setTime(9, 0);
+
+        $this->actingAs($user)->post('/notifications', $this->validData([
+            'final_at' => $final->format(self::FORMAT),
+            'reminder_dates' => [
+                $final->copy()->subDays(1)->format(self::FORMAT),
+                '',
+                $final->copy()->subDays(7)->format(self::FORMAT),
+                $final->copy()->subDays(3)->format(self::FORMAT),
+            ],
+        ]))->assertRedirect('/notifications');
+
+        $dates = $user->reminders()->sole()->dates;
+        $this->assertCount(4, $dates);
+        $this->assertSame([false, false, false, true], $dates->pluck('is_final')->all());
+        $this->assertTrue($dates[0]->notify_at->eq($final->copy()->subDays(7)));
+        $this->assertTrue($dates[3]->notify_at->eq($final));
+    }
+
+    public function test_the_final_date_is_required_and_must_be_in_the_future(): void
     {
         $user = User::factory()->create();
 
-        $this->actingAs($user)->post('/notifications', [
-            'title' => 'Too late',
-            'notify_at' => now()->subHour()->format('Y-m-d\TH:i'),
-            'timezone' => 'UTC',
-            'channel' => 'email',
-        ])->assertSessionHasErrors('notify_at');
+        $this->actingAs($user)->post('/notifications', $this->validData(['final_at' => '']))
+            ->assertSessionHasErrors('final_at');
+        $this->actingAs($user)->post('/notifications', $this->validData([
+            'final_at' => now()->subHour()->format(self::FORMAT),
+        ]))->assertSessionHasErrors('final_at');
+
+        $this->assertDatabaseCount('reminders', 0);
+    }
+
+    public function test_reminders_must_be_in_the_future_and_before_the_final_date(): void
+    {
+        $user = User::factory()->create();
+        $final = now()->addDays(5);
+
+        $this->actingAs($user)->post('/notifications', $this->validData([
+            'final_at' => $final->format(self::FORMAT),
+            'reminder_dates' => [
+                now()->subHour()->format(self::FORMAT),
+                $final->format(self::FORMAT),
+                $final->copy()->addDay()->format(self::FORMAT),
+                'not a date',
+            ],
+        ]))->assertSessionHasErrors(['reminder_dates.0', 'reminder_dates.1', 'reminder_dates.2', 'reminder_dates.3']);
+
+        $this->assertDatabaseCount('reminders', 0);
+    }
+
+    public function test_more_than_four_reminders_or_duplicates_are_rejected(): void
+    {
+        $user = User::factory()->create();
+        $day = fn (int $n) => now()->addDays($n)->format(self::FORMAT);
+
+        $this->actingAs($user)->post('/notifications', $this->validData([
+            'reminder_dates' => [$day(1), $day(2), $day(3), $day(4), $day(5)],
+        ]))->assertSessionHasErrors('reminder_dates');
+
+        $this->actingAs($user)->post('/notifications', $this->validData([
+            'reminder_dates' => [$day(1), $day(1)],
+        ]))->assertSessionHasErrors('reminder_dates.1');
 
         $this->assertDatabaseCount('reminders', 0);
     }
@@ -99,43 +181,44 @@ class ReminderTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $this->actingAs($user)->post('/notifications', [
-            'title' => 'Pigeon',
-            'notify_at' => now()->addDay()->format('Y-m-d\TH:i'),
-            'timezone' => 'UTC',
-            'channel' => 'pigeon',
-        ])->assertSessionHasErrors('channel');
+        $this->actingAs($user)->post('/notifications', $this->validData(['channel' => 'pigeon']))
+            ->assertSessionHasErrors('channel');
     }
 
-    public function test_updating_a_sent_notification_schedules_it_again(): void
+    public function test_updating_a_notification_replaces_its_whole_schedule(): void
     {
         $user = User::factory()->create();
-        $reminder = Reminder::factory()->for($user)->create([
-            'status' => ReminderStatus::Sent,
-            'sent_at' => now(),
-        ]);
+        $reminder = Reminder::factory()->for($user)
+            ->has(ReminderDate::factory()->final()->sent()->state(['notify_at' => now()->subHour()]), 'dates')
+            ->has(ReminderDate::factory()->sent()->state(['notify_at' => now()->subDay()]), 'dates')
+            ->create();
+        $final = now()->addDays(3)->setTime(8, 0);
 
-        $this->actingAs($user)->put("/notifications/{$reminder->id}", [
+        $this->actingAs($user)->put("/notifications/{$reminder->id}", $this->validData([
             'title' => 'Renamed',
-            'notify_at' => now()->addDays(2)->format('Y-m-d\TH:i'),
-            'timezone' => 'UTC',
-            'channel' => 'email',
-        ])->assertRedirect('/notifications');
+            'final_at' => $final->format(self::FORMAT),
+            'reminder_dates' => [$final->copy()->subDay()->format(self::FORMAT)],
+        ]))->assertRedirect('/notifications');
 
         $reminder->refresh();
         $this->assertSame('Renamed', $reminder->title);
-        $this->assertSame(ReminderStatus::Pending, $reminder->status);
-        $this->assertNull($reminder->sent_at);
+        $this->assertCount(2, $reminder->dates);
+        $this->assertTrue($reminder->dates->every(fn ($date) => $date->status === ReminderStatus::Pending));
+        $this->assertTrue($reminder->dates->last()->is_final);
+        $this->assertTrue($reminder->dates->last()->notify_at->eq($final));
     }
 
     public function test_a_notification_can_be_deleted(): void
     {
         $user = User::factory()->create();
         $reminder = Reminder::factory()->for($user)->create();
+        $reminder->syncRecipients(['a@example.com']);
 
         $this->actingAs($user)->delete("/notifications/{$reminder->id}")->assertRedirect('/notifications');
 
         $this->assertModelMissing($reminder);
+        $this->assertDatabaseCount('reminder_dates', 0);
+        $this->assertDatabaseCount('reminder_recipients', 0);
     }
 
     public function test_users_cannot_touch_other_users_notifications(): void
@@ -144,34 +227,11 @@ class ReminderTest extends TestCase
         $reminder = Reminder::factory()->create();
 
         $this->actingAs($user)->get("/notifications/{$reminder->id}/edit")->assertForbidden();
-        $this->actingAs($user)->put("/notifications/{$reminder->id}", [
-            'title' => 'Hijacked',
-            'notify_at' => now()->addDay()->format('Y-m-d\TH:i'),
-            'timezone' => 'UTC',
-            'channel' => 'email',
-        ])->assertForbidden();
+        $this->actingAs($user)->put("/notifications/{$reminder->id}", $this->validData(['title' => 'Hijacked']))
+            ->assertForbidden();
         $this->actingAs($user)->delete("/notifications/{$reminder->id}")->assertForbidden();
 
         $this->assertModelExists($reminder);
-    }
-
-    public function test_due_notifications_are_emailed_and_marked_sent(): void
-    {
-        Notification::fake();
-
-        $due = Reminder::factory()->due()->create();
-        $future = Reminder::factory()->create();
-
-        $this->artisan('reminders:send')->assertSuccessful();
-
-        Notification::assertSentTo($due->user, ReminderDue::class, function (ReminderDue $notification, array $channels) use ($due) {
-            return $notification->reminder->is($due) && $channels === ['mail'];
-        });
-        Notification::assertNotSentTo($future->user, ReminderDue::class);
-
-        $this->assertSame(ReminderStatus::Sent, $due->fresh()->status);
-        $this->assertNotNull($due->fresh()->sent_at);
-        $this->assertSame(ReminderStatus::Pending, $future->fresh()->status);
     }
 
     public function test_a_notification_can_notify_up_to_three_other_people(): void
@@ -236,22 +296,40 @@ class ReminderTest extends TestCase
         );
     }
 
-    public function test_deleting_a_notification_deletes_its_recipients(): void
-    {
-        $user = User::factory()->create();
-        $reminder = Reminder::factory()->for($user)->create();
-        $reminder->syncRecipients(['a@example.com']);
-
-        $this->actingAs($user)->delete("/notifications/{$reminder->id}");
-
-        $this->assertDatabaseCount('reminder_recipients', 0);
-    }
-
-    public function test_due_notifications_are_emailed_to_the_other_people_too(): void
+    public function test_each_due_date_is_sent_on_its_own(): void
     {
         Notification::fake();
 
-        $reminder = Reminder::factory()->due()->create();
+        $reminder = Reminder::factory()
+            ->has(ReminderDate::factory()->due(), 'dates')
+            ->has(ReminderDate::factory()->final(), 'dates')
+            ->create();
+        [$early, $final] = $reminder->dates->all();
+
+        $this->artisan('reminders:send')->assertSuccessful();
+
+        Notification::assertSentTo($reminder->user, ReminderDue::class, function (ReminderDue $notification, array $channels) use ($early) {
+            return $notification->date->is($early) && $channels === ['mail'];
+        });
+        Notification::assertSentTimes(ReminderDue::class, 1);
+        $this->assertSame(ReminderStatus::Sent, $early->fresh()->status);
+        $this->assertNotNull($early->fresh()->sent_at);
+        $this->assertSame(ReminderStatus::Pending, $final->fresh()->status);
+        $this->assertSame(ReminderStatus::Pending, $reminder->fresh()->status());
+
+        $this->travel(2)->days();
+        $this->artisan('reminders:send')->assertSuccessful();
+
+        Notification::assertSentTimes(ReminderDue::class, 2);
+        $this->assertSame(ReminderStatus::Sent, $final->fresh()->status);
+        $this->assertSame(ReminderStatus::Sent, $reminder->fresh()->status());
+    }
+
+    public function test_due_dates_are_emailed_to_the_other_people_too(): void
+    {
+        Notification::fake();
+
+        $reminder = Reminder::factory()->has(ReminderDate::factory()->final()->due(), 'dates')->create();
         $reminder->syncRecipients(['a@example.com', 'b@example.com']);
 
         $this->artisan('reminders:send')->assertSuccessful();
@@ -263,16 +341,28 @@ class ReminderTest extends TestCase
             });
         }
         Notification::assertSentOnDemandTimes(ReminderDue::class, 2);
-        $this->assertSame(ReminderStatus::Sent, $reminder->fresh()->status);
+    }
+
+    public function test_sent_dates_are_not_sent_twice(): void
+    {
+        Notification::fake();
+
+        Reminder::factory()->has(ReminderDate::factory()->final()->due(), 'dates')->create();
+
+        $this->artisan('reminders:send');
+        $this->artisan('reminders:send');
+
+        Notification::assertSentTimes(ReminderDue::class, 1);
     }
 
     public function test_the_email_tells_other_people_who_asked_for_the_reminder(): void
     {
         $owner = User::factory()->create(['name' => 'Thodoris']);
         $reminder = Reminder::factory()->for($owner)->create(['title' => 'Team dinner']);
+        $final = $reminder->finalDate;
 
-        $ownerMail = (new ReminderDue($reminder))->toMail($owner);
-        $otherMail = (new ReminderDue($reminder))->toMail(Notification::route('mail', 'a@example.com'));
+        $ownerMail = (new ReminderDue($final))->toMail($owner);
+        $otherMail = (new ReminderDue($final))->toMail(Notification::route('mail', 'a@example.com'));
 
         $this->assertSame('Hello Thodoris,', $ownerMail->greeting);
         $this->assertNotNull($ownerMail->actionUrl);
@@ -281,15 +371,21 @@ class ReminderTest extends TestCase
         $this->assertNull($otherMail->actionUrl);
     }
 
-    public function test_sent_notifications_are_not_sent_twice(): void
+    public function test_early_reminder_emails_mention_the_final_date(): void
     {
-        Notification::fake();
+        $owner = User::factory()->create();
+        $reminder = Reminder::factory()->for($owner)->create(['title' => 'Exam', 'timezone' => 'Europe/Athens']);
+        $reminder->syncDates(now()->setDate(2030, 6, 14)->setTime(6, 0), [now()->setDate(2030, 6, 7)->setTime(6, 0)]);
+        [$early, $final] = $reminder->dates->all();
 
-        Reminder::factory()->due()->create();
+        $earlyMail = (new ReminderDue($early))->toMail($owner);
+        $finalMail = (new ReminderDue($final))->toMail($owner);
 
-        $this->artisan('reminders:send');
-        $this->artisan('reminders:send');
-
-        Notification::assertSentTimes(ReminderDue::class, 1);
+        $this->assertSame('Upcoming: Exam', $earlyMail->subject);
+        $this->assertContains(
+            'This is an early reminder. The final date is Friday, June 14, 2030 at 09:00 (Europe/Athens).',
+            $earlyMail->introLines
+        );
+        $this->assertSame('Reminder: Exam', $finalMail->subject);
     }
 }

@@ -3,14 +3,18 @@
 namespace App\Notifications;
 
 use App\Models\Reminder;
+use App\Models\ReminderDate;
 use App\Models\User;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class ReminderDue extends Notification
 {
-    public function __construct(public Reminder $reminder)
+    public Reminder $reminder;
+
+    public function __construct(public ReminderDate $date)
     {
+        $this->reminder = $date->reminder;
     }
 
     /**
@@ -25,7 +29,9 @@ class ReminderDue extends Notification
     {
         $isOwner = $notifiable instanceof User && $notifiable->is($this->reminder->user);
 
-        $mail = (new MailMessage)->subject('Reminder: '.$this->reminder->title);
+        $mail = (new MailMessage)->subject(
+            ($this->date->is_final ? 'Reminder: ' : 'Upcoming: ').$this->reminder->title
+        );
 
         if ($isOwner) {
             $mail->greeting('Hello '.$notifiable->name.',');
@@ -36,6 +42,10 @@ class ReminderDue extends Notification
 
         $mail->line($this->reminder->title);
 
+        if (! $this->date->is_final) {
+            $mail->line('This is an early reminder. The final date is '.$this->finalDateText().'.');
+        }
+
         if ($this->reminder->message) {
             $mail->line($this->reminder->message);
         }
@@ -44,5 +54,11 @@ class ReminderDue extends Notification
         return $isOwner
             ? $mail->action('View your notifications', route('reminders.index'))
             : $mail;
+    }
+
+    private function finalDateText(): string
+    {
+        return $this->reminder->toLocal($this->reminder->finalDate->notify_at)->format('l, F j, Y \a\t H:i')
+            .' ('.$this->reminder->timezone.')';
     }
 }

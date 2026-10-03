@@ -25,7 +25,7 @@
                 <thead>
                     <tr>
                         <th>Title</th>
-                        <th>Notify at</th>
+                        <th>Dates</th>
                         <th>Channel</th>
                         <th>Status</th>
                         <th></th>
@@ -44,11 +44,20 @@
                                 @endif
                             </td>
                             <td>
-                                {{ $reminder->localNotifyAt()->format('M j, Y H:i') }}
+                                @foreach ($reminder->dates as $date)
+                                    <div @class(['muted' => ! $date->is_final])>
+                                        {{ $date->is_final ? 'Final' : 'Reminder' }}:
+                                        {{ $reminder->toLocal($date->notify_at)->format('M j, Y H:i') }}
+                                        @if ($date->status !== \App\Enums\ReminderStatus::Pending)
+                                            <span class="badge badge-{{ $date->status->value }}">{{ $date->status->label() }}</span>
+                                        @endif
+                                    </div>
+                                @endforeach
                                 <div class="muted">{{ $reminder->timezone }}</div>
                             </td>
                             <td>{{ $reminder->channel->label() }}</td>
-                            <td><span class="badge badge-{{ $reminder->status->value }}">{{ $reminder->status->label() }}</span></td>
+                            @php($status = $reminder->status())
+                            <td><span class="badge badge-{{ $status->value }}">{{ $status->label() }}</span></td>
                             <td class="actions">
                                 <a href="{{ route('reminders.edit', $reminder) }}">Edit</a>
                                 <form method="POST" action="{{ route('reminders.destroy', $reminder) }}"

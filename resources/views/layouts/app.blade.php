@@ -72,9 +72,9 @@
         .badge-pending { background: var(--info-bg); color: var(--info-text); }
         .badge-sent { background: var(--success-bg); color: var(--success-text); }
         .badge-failed { background: var(--danger-bg); color: var(--danger-text); }
-        fieldset.recipients { border: 0; padding: 0; margin: 1rem 0 0; }
-        fieldset.recipients legend { padding: 0; font-size: .9rem; }
-        fieldset.recipients input { margin-top: .5rem; }
+        fieldset.optional-list { border: 0; padding: 0; margin: 1rem 0 0; }
+        fieldset.optional-list legend { padding: 0; font-size: .9rem; }
+        fieldset.optional-list input { margin-top: .5rem; }
         .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
         .logout { margin-top: 2rem; display: flex; gap: 1rem; align-items: center; }
         .theme-switch { display: flex; justify-content: flex-end; margin: -1rem -1rem 1rem 0; }

@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Enums\ReminderStatus;
-use App\Models\Reminder;
+use App\Models\ReminderDate;
 use App\Notifications\ReminderDue;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Notification;
@@ -13,24 +13,26 @@ class SendDueReminders extends Command
 {
     protected $signature = 'reminders:send';
 
-    protected $description = 'Send every pending notification whose time has come';
+    protected $description = 'Send every pending notification date whose time has come';
 
     public function handle(): int
     {
         $sent = 0;
         $failed = 0;
 
-        Reminder::due()->with(['user', 'recipients'])->chunkById(100, function ($reminders) use (&$sent, &$failed) {
-            foreach ($reminders as $reminder) {
-                if ($this->deliver($reminder)) {
-                    $reminder->update(['status' => ReminderStatus::Sent, 'sent_at' => now()]);
-                    $sent++;
-                } else {
-                    $reminder->update(['status' => ReminderStatus::Failed]);
-                    $failed++;
+        ReminderDate::due()
+            ->with(['reminder.user', 'reminder.recipients', 'reminder.finalDate'])
+            ->chunkById(100, function ($dates) use (&$sent, &$failed) {
+                foreach ($dates as $date) {
+                    if ($this->deliver($date)) {
+                        $date->update(['status' => ReminderStatus::Sent, 'sent_at' => now()]);
+                        $sent++;
+                    } else {
+                        $date->update(['status' => ReminderStatus::Failed]);
+                        $failed++;
+                    }
                 }
-            }
-        });
+            });
 
         $this->info("Sent {$sent} notification(s), {$failed} failed.");
 
@@ -39,11 +41,12 @@ class SendDueReminders extends Command
 
     /**
      * Notify the owner and every extra recipient. One failed delivery doesn't stop
-     * the others, but marks the whole reminder as failed.
+     * the others, but marks the date as failed.
      */
-    private function deliver(Reminder $reminder): bool
+    private function deliver(ReminderDate $date): bool
     {
-        $notification = new ReminderDue($reminder);
+        $reminder = $date->reminder;
+        $notification = new ReminderDue($date);
         $targets = [$reminder->user];
 
         foreach ($reminder->recipients as $recipient) {

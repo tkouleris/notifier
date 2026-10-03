@@ -3,7 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\ReminderChannel;
-use App\Enums\ReminderStatus;
+use App\Models\Reminder;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -18,17 +18,20 @@ class ReminderFactory extends Factory
             'user_id' => User::factory(),
             'title' => fake()->sentence(4),
             'message' => fake()->paragraph(),
-            'notify_at' => now()->addDay(),
             'timezone' => 'UTC',
             'channel' => ReminderChannel::Email,
-            'status' => ReminderStatus::Pending,
         ];
     }
 
-    public function due(): static
+    /**
+     * Every reminder needs a final date; give it one tomorrow unless the test built its own.
+     */
+    public function configure(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'notify_at' => now()->subMinute(),
-        ]);
+        return $this->afterCreating(function (Reminder $reminder) {
+            if ($reminder->dates()->doesntExist()) {
+                $reminder->dates()->create(['notify_at' => now()->addDay(), 'is_final' => true]);
+            }
+        });
     }
 }

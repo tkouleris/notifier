@@ -6,8 +6,8 @@
     <p><a href="{{ route('reminders.index') }}">&larr; Back to notifications</a></p>
     <h1>Edit notification</h1>
 
-    @if ($reminder->status !== \App\Enums\ReminderStatus::Pending)
-        <p class="muted">This notification is {{ strtolower($reminder->status->label()) }}. Saving it will schedule it again.</p>
+    @if ($reminder->dates->contains(fn ($date) => $date->status !== \App\Enums\ReminderStatus::Pending))
+        <p class="muted">Dates that have already been sent are not shown. Saving replaces the whole schedule with the dates below.</p>
     @endif
 
     <form method="POST" action="{{ route('reminders.update', $reminder) }}">
