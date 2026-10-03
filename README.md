@@ -123,18 +123,14 @@ php artisan reminders:send
 
 With the default `QUEUE_CONNECTION=sync`, emails are sent immediately inside the
 `reminders:send` command. That works, but failed emails are not retried. To send them in the
-background with retries, use the database queue:
-
-```bash
-php artisan queue:table
-php artisan migrate
-```
+background with retries, use the database queue. Its `jobs` table is created by the migrations
+from the installation step, so you only need to switch the connection in `.env`:
 
 ```dotenv
 QUEUE_CONNECTION=database
 ```
 
-Then keep a worker running (on a server, use Supervisor or systemd to keep it alive):
+Then keep a worker running. Locally, a terminal is enough. On a server, use Supervisor (see below):
 
 ```bash
 php artisan queue:work
@@ -144,6 +140,98 @@ Each email job retries itself up to 3 times, waiting 1 and then 5 minutes betwee
 
 A date is marked *sent* as soon as its emails are queued. If any of its emails still fails
 after all retries, the date is marked *failed*.
+
+### 3. Keep the worker running with Supervisor (Linux)
+
+`queue:work` is a long-running process. If it stops, because of a crash, a reboot or a deploy,
+reminders are queued but no email goes out. [Supervisor](http://supervisord.org/) starts the worker
+at boot and restarts it whenever it exits.
+
+The examples below assume the app lives in `/var/www/notifier` and the web server runs as
+`www-data`. Change the paths and user to match your server.
+
+**1. Install Supervisor**
+
+```bash
+# Debian / Ubuntu
+sudo apt update && sudo apt install supervisor
+
+# RHEL / Rocky / AlmaLinux / Fedora
+sudo dnf install supervisor
+sudo systemctl enable --now supervisord
+```
+
+**2. Create the worker config**
+
+On Debian/Ubuntu, create `/etc/supervisor/conf.d/notifier-worker.conf`.
+On RHEL-based systems, create `/etc/supervisord.d/notifier-worker.ini`.
+
+```ini
+[program:notifier-worker]
+process_name=%(program_name)s_%(process_num)02d
+command=/usr/bin/php /var/www/notifier/artisan queue:work database --sleep=3 --max-time=3600
+directory=/var/www/notifier
+user=www-data
+numprocs=1
+autostart=true
+autorestart=true
+stopasgroup=true
+killasgroup=true
+stopwaitsecs=60
+redirect_stderr=true
+stdout_logfile=/var/www/notifier/storage/logs/worker.log
+```
+
+- `--max-time=3600` makes the worker exit after an hour and Supervisor starts a fresh one, which keeps memory use in check.
+- `numprocs=1` is plenty for most installs. Raise it to send more emails in parallel.
+- `stopwaitsecs` gives a running email time to finish before the worker is stopped.
+- Use `which php` to find the PHP path if it isn't `/usr/bin/php`.
+
+**3. Load and start it**
+
+```bash
+sudo supervisorctl reread
+sudo supervisorctl update
+sudo supervisorctl start "notifier-worker:*"
+```
+
+**4. Check that it's running**
+
+```bash
+sudo supervisorctl status
+# notifier-worker:notifier-worker_00   RUNNING   pid 12345, uptime 0:01:02
+
+tail -f /var/www/notifier/storage/logs/worker.log
+```
+
+**5. After every deploy**
+
+Workers keep the old code in memory, so tell them to restart once they finish their current job.
+Supervisor starts them again with the new code:
+
+```bash
+php artisan queue:restart
+```
+
+If you change the Supervisor config itself, run `sudo supervisorctl reread && sudo supervisorctl update` again.
+
+**Optional: run the scheduler with Supervisor instead of cron**
+
+If you prefer not to use cron, Supervisor can also keep `schedule:work` running.
+Add a second program to the same file:
+
+```ini
+[program:notifier-scheduler]
+command=/usr/bin/php /var/www/notifier/artisan schedule:work
+directory=/var/www/notifier
+user=www-data
+autostart=true
+autorestart=true
+redirect_stderr=true
+stdout_logfile=/var/www/notifier/storage/logs/scheduler.log
+```
+
+Use either cron or this program, not both. Running both would start the scheduler twice every minute.
 
 ## How to use it
 
