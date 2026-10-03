@@ -34,7 +34,23 @@ class RegistrationTest extends TestCase
 
         $user = User::where('email', 'test@example.com')->firstOrFail();
         $this->assertFalse($user->hasVerifiedEmail());
+        $this->assertSame('UTC', $user->timezone);
         Notification::assertSentTo($user, VerifyEmail::class);
+    }
+
+    public function test_new_users_start_with_the_browser_timezone(): void
+    {
+        Notification::fake();
+
+        $this->post('/register', [
+            'name' => 'Test User',
+            'email' => 'test@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'timezone' => 'Europe/Athens',
+        ]);
+
+        $this->assertSame('Europe/Athens', User::where('email', 'test@example.com')->value('timezone'));
     }
 
     public function test_user_sees_verification_page_when_verification_email_fails(): void

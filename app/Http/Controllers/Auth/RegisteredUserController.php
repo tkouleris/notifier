@@ -28,6 +28,7 @@ class RegisteredUserController extends Controller
             'name' => $request->validated('name'),
             'email' => $request->validated('email'),
             'password' => Hash::make($request->validated('password')),
+            'timezone' => $request->validated('timezone') ?? 'UTC',
         ]);
 
         Auth::login($user);

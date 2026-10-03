@@ -25,7 +25,6 @@ class ReminderTest extends TestCase
         return $overrides + [
             'title' => 'Team dinner',
             'final_at' => now()->addDays(10)->format(self::FORMAT),
-            'timezone' => 'UTC',
             'channel' => 'email',
         ];
     }
@@ -66,11 +65,12 @@ class ReminderTest extends TestCase
 
     public function test_create_and_edit_forms_can_be_rendered(): void
     {
-        $user = User::factory()->create();
-        $reminder = Reminder::factory()->for($user)->create(['timezone' => 'Europe/Athens']);
+        // The form shows times in the user's settings timezone, not the one the notification was made in.
+        $user = User::factory()->create(['timezone' => 'Europe/Athens']);
+        $reminder = Reminder::factory()->for($user)->create(['timezone' => 'UTC']);
         $reminder->syncDates(now()->setDate(2030, 5, 10)->setTime(6, 30), [now()->setDate(2030, 5, 1)->setTime(6, 30)]);
 
-        $this->actingAs($user)->get('/notifications/create')->assertOk()->assertSee('New notification');
+        $this->actingAs($user)->get('/notifications/create')->assertOk()->assertSee('New notification')->assertSee('Timezone: Europe/Athens');
         $this->actingAs($user)->get("/notifications/{$reminder->id}/edit")
             ->assertOk()
             ->assertSee('name="final_at" required value="2030-05-10T09:30"', false)
@@ -121,18 +121,19 @@ class ReminderTest extends TestCase
 
     public function test_a_notification_can_be_created_in_the_users_timezone(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['timezone' => 'Europe/Athens']);
         $local = now('Europe/Athens')->addDay()->setTime(9, 30);
 
         $this->actingAs($user)->post('/notifications', $this->validData([
             'title' => 'Dentist',
             'message' => 'Bring the papers',
             'final_at' => $local->format(self::FORMAT),
-            'timezone' => 'Europe/Athens',
+            'timezone' => 'America/New_York', // ignored: the timezone from settings wins
         ]))->assertRedirect('/notifications');
 
         $reminder = $user->reminders()->sole();
         $this->assertSame('Dentist', $reminder->title);
+        $this->assertSame('Europe/Athens', $reminder->timezone);
 
         $date = $reminder->dates()->sole();
         $this->assertTrue($date->is_final);
@@ -434,7 +435,7 @@ class ReminderTest extends TestCase
 
     public function test_early_reminder_emails_mention_the_final_date(): void
     {
-        $owner = User::factory()->create();
+        $owner = User::factory()->create(['timezone' => 'Europe/Athens']);
         $reminder = Reminder::factory()->for($owner)->create(['title' => 'Exam', 'timezone' => 'Europe/Athens']);
         $reminder->syncDates(now()->setDate(2030, 6, 14)->setTime(6, 0), [now()->setDate(2030, 6, 7)->setTime(6, 0)]);
         [$early, $final] = $reminder->dates->all();

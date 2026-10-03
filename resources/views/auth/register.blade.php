@@ -23,8 +23,21 @@
         <label for="password_confirmation">Confirm password</label>
         <input id="password_confirmation" type="password" name="password_confirmation" required autocomplete="new-password">
 
+        <input id="timezone" type="hidden" name="timezone" value="{{ old('timezone') }}">
+
         <button type="submit">Register</button>
     </form>
+
+    <script>
+        // Start with the browser's timezone; it can be changed later in settings.
+        (function () {
+            var input = document.getElementById('timezone');
+            var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            if (tz && ! input.value) {
+                input.value = tz;
+            }
+        })();
+    </script>
 
     <p class="muted">Already registered? <a href="{{ route('login') }}">Log in</a></p>
 @endsection

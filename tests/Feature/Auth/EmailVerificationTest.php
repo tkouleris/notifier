@@ -38,7 +38,7 @@ class EmailVerificationTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $this->actingAs($user)->get('/notifications')->assertOk()->assertSee($user->email);
+        $this->actingAs($user)->get('/notifications')->assertOk()->assertSee($user->name);
     }
 
     public function test_verified_user_is_redirected_away_from_verification_page(): void

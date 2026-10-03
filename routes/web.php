@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReminderController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\ThemeController;
 use Illuminate\Support\Facades\Route;
 
@@ -39,6 +41,13 @@ Route::put('/theme', [ThemeController::class, 'update'])->middleware('auth')->na
 Route::middleware(['auth', 'verified'])->group(function () {
     // Old entry point; the notification list is now the home page.
     Route::redirect('/home', '/notifications')->name('home');
+
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
+
+    Route::get('/settings', [SettingsController::class, 'edit'])->name('settings.edit');
+    Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
 
     Route::resource('notifications', ReminderController::class)
         ->except('show')

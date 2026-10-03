@@ -46,7 +46,6 @@ class ReminderRequest extends FormRequest
             'final_at' => ['required', 'date_format:'.self::DATE_FORMAT],
             'reminder_dates' => ['nullable', 'array', 'max:'.Reminder::MAX_EARLY_DATES],
             'reminder_dates.*' => ['date_format:'.self::DATE_FORMAT, 'distinct'],
-            'timezone' => ['required', 'timezone:all'],
             'channel' => ['required', Rule::enum(ReminderChannel::class)],
             'recipients' => ['nullable', 'array', 'max:'.Reminder::MAX_RECIPIENTS],
             'recipients.*' => [
@@ -75,7 +74,7 @@ class ReminderRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
-            if ($validator->errors()->hasAny(['final_at', 'timezone'])) {
+            if ($validator->errors()->has('final_at')) {
                 return;
             }
 
@@ -111,7 +110,7 @@ class ReminderRequest extends FormRequest
         return [
             'title' => $this->validated('title'),
             'message' => $this->validated('message'),
-            'timezone' => $this->validated('timezone'),
+            'timezone' => $this->user()->timezone,
             'channel' => $this->validated('channel'),
         ];
     }
@@ -149,11 +148,11 @@ class ReminderRequest extends FormRequest
     }
 
     /**
-     * A submitted local time (in the user's timezone) converted to UTC.
+     * A submitted local time (in the timezone from the user's settings) converted to UTC.
      */
     private function toUtc(string $value): Carbon
     {
-        return Carbon::createFromFormat(self::DATE_FORMAT, $value, $this->input('timezone'))
+        return Carbon::createFromFormat(self::DATE_FORMAT, $value, $this->user()->timezone)
             ->second(0)
             ->utc();
     }

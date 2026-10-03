@@ -90,14 +90,6 @@ class Reminder extends Model
     }
 
     /**
-     * A stored (UTC) time in the owner's timezone.
-     */
-    public function toLocal(Carbon $time): Carbon
-    {
-        return $time->copy()->setTimezone($this->timezone);
-    }
-
-    /**
      * Replace the extra recipients with the given email addresses.
      *
      * @param  array<int, string>  $emails

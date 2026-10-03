@@ -50,7 +50,7 @@
         a { color: var(--link); }
         main { max-width: 420px; margin: 4rem auto; background: var(--surface); padding: 2rem; border-radius: 8px; box-shadow: 0 1px 3px var(--shadow); }
         label { display: block; margin-top: 1rem; font-size: .9rem; }
-        input[type=text], input[type=email], input[type=password], input[type=datetime-local], textarea, select { width: 100%; padding: .5rem; margin-top: .25rem; box-sizing: border-box; border: 1px solid var(--border); border-radius: 4px; font: inherit; background: var(--surface); color: var(--text); }
+        input[type=text], input[type=email], input[type=password], input[type=datetime-local], input[type=date], textarea, select { width: 100%; padding: .5rem; margin-top: .25rem; box-sizing: border-box; border: 1px solid var(--border); border-radius: 4px; font: inherit; background: var(--surface); color: var(--text); }
         button { margin-top: 1.25rem; padding: .55rem 1.1rem; background: var(--primary-bg); color: var(--primary-text); border: 0; border-radius: 4px; cursor: pointer; }
         .error { color: var(--danger); font-size: .85rem; margin-top: .25rem; }
         .status { background: var(--success-bg); color: var(--success-text); padding: .75rem; border-radius: 4px; margin-bottom: 1rem; }
@@ -80,29 +80,51 @@
         button.add-row { margin-top: .5rem; }
         button[hidden] { display: none; }
         .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-        .logout { margin-top: 2rem; display: flex; gap: 1rem; align-items: center; }
-        .theme-switch { display: flex; justify-content: flex-end; margin: -1rem -1rem 1rem 0; }
+        .navbar { display: flex; flex-wrap: wrap; gap: .75rem 1.5rem; align-items: center; padding: .75rem 1.5rem; background: var(--surface); border-bottom: 1px solid var(--divider); }
+        .navbar .brand { font-weight: 600; color: var(--text); text-decoration: none; }
+        .navbar ul { display: flex; flex-wrap: wrap; gap: 1rem; list-style: none; margin: 0; padding: 0; }
+        .navbar ul a { color: var(--muted); text-decoration: none; }
+        .navbar ul a:hover, .navbar ul a[aria-current=page] { color: var(--text); }
+        .navbar ul a[aria-current=page] { font-weight: 600; }
+        .navbar-end { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin-left: auto; }
+        .navbar-end form { margin: 0; }
+        hr.section { border: 0; border-top: 1px solid var(--divider); margin: 2rem 0 1.5rem; }
+        .theme-switch { display: flex; }
         .theme-switch fieldset { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; padding: 2px; margin: 0; }
         .theme-switch button { margin: 0; padding: .2rem .75rem; border-radius: 999px; font-size: .8rem; background: none; color: var(--muted); }
         .theme-switch button[aria-pressed=true] { background: var(--primary-bg); color: var(--primary-text); cursor: default; }
-        @media (max-width: 600px) { main { margin: 1rem; padding: 1.25rem; } .theme-switch { margin: 0 0 1rem; } }
+        @media (max-width: 600px) { main { margin: 1rem; padding: 1.25rem; } .navbar { padding: .75rem 1rem; } .navbar-end { margin-left: 0; } }
     </style>
 </head>
 <body>
+@auth
+    <nav class="navbar" aria-label="Main">
+        <a class="brand" href="{{ route('reminders.index') }}">{{ config('app.name') }}</a>
+        <ul>
+            @foreach (['reminders.index' => 'Notifications', 'profile.edit' => 'Profile', 'settings.edit' => 'Settings'] as $route => $label)
+                <li><a href="{{ route($route) }}" @if (request()->routeIs(\Illuminate\Support\Str::before($route, '.').'.*')) aria-current="page" @endif>{{ $label }}</a></li>
+            @endforeach
+        </ul>
+        <div class="navbar-end">
+            <form method="POST" action="{{ route('theme.update') }}" class="theme-switch">
+                @csrf
+                @method('PUT')
+                <fieldset aria-label="Color theme">
+                    @foreach (\App\Enums\Theme::cases() as $option)
+                        <button type="submit" name="theme" value="{{ $option->value }}"
+                                aria-pressed="{{ $theme === $option ? 'true' : 'false' }}">{{ $option->label() }}</button>
+                    @endforeach
+                </fieldset>
+            </form>
+            <span class="muted">{{ auth()->user()->name }}</span>
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button type="submit" class="link">Log out</button>
+            </form>
+        </div>
+    </nav>
+@endauth
 <main class="@yield('main_class')">
-    @auth
-        <form method="POST" action="{{ route('theme.update') }}" class="theme-switch">
-            @csrf
-            @method('PUT')
-            <fieldset aria-label="Color theme">
-                @foreach (\App\Enums\Theme::cases() as $option)
-                    <button type="submit" name="theme" value="{{ $option->value }}"
-                            aria-pressed="{{ $theme === $option ? 'true' : 'false' }}">{{ $option->label() }}</button>
-                @endforeach
-            </fieldset>
-        </form>
-    @endauth
-
     @yield('content')
 </main>
 </body>

@@ -58,7 +58,10 @@ class ReminderDue extends Notification
 
     private function finalDateText(): string
     {
-        return $this->reminder->toLocal($this->reminder->finalDate->notify_at)->format('l, F j, Y \a\t H:i')
-            .' ('.$this->reminder->timezone.')';
+        // Shown in the owner's timezone, the one the dates were picked in.
+        $owner = $this->reminder->user;
+
+        return $owner->toLocal($this->reminder->finalDate->notify_at)->format('l, F j, Y \a\t H:i')
+            .' ('.$owner->timezone.')';
     }
 }

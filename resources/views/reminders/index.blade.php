@@ -47,13 +47,12 @@
                                 @foreach ($reminder->dates as $date)
                                     <div @class(['muted' => ! $date->is_final])>
                                         {{ $date->is_final ? 'Final' : 'Reminder' }}:
-                                        {{ $reminder->toLocal($date->notify_at)->format('M j, Y H:i') }}
+                                        {{ auth()->user()->toLocal($date->notify_at)->format('M j, Y H:i') }}
                                         @if ($date->status !== \App\Enums\ReminderStatus::Pending)
                                             <span class="badge badge-{{ $date->status->value }}">{{ $date->status->label() }}</span>
                                         @endif
                                     </div>
                                 @endforeach
-                                <div class="muted">{{ $reminder->timezone }}</div>
                             </td>
                             <td>{{ $reminder->channel->label() }}</td>
                             @php($status = $reminder->status())
@@ -74,11 +73,6 @@
         </div>
 
         {{ $reminders->links('pagination::simple-default') }}
+        <p class="muted">Times are shown in {{ auth()->user()->timezone }}.</p>
     @endif
-
-    <form method="POST" action="{{ route('logout') }}" class="logout">
-        @csrf
-        <span class="muted">{{ auth()->user()->email }}</span>
-        <button type="submit" class="link">Log out</button>
-    </form>
 @endsection

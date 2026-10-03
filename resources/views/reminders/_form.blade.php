@@ -11,21 +11,21 @@
 @php
     $inputFormat = 'Y-m-d\TH:i';
     $finalDate = $reminder->dates->firstWhere('is_final', true);
-    $finalValue = old('final_at', $finalDate ? $reminder->toLocal($finalDate->notify_at)->format($inputFormat) : '');
+    // Times are entered and shown in the timezone from the user's settings.
+    $user = auth()->user();
+    $finalValue = old('final_at', $finalDate ? $user->toLocal($finalDate->notify_at)->format($inputFormat) : '');
     // Reminders already sent are in the past, so only the ones still to come are editable.
     $reminderValues = old('reminder_dates', $reminder->earlyDates()
         ->where('status', \App\Enums\ReminderStatus::Pending)
-        ->map(fn ($date) => $reminder->toLocal($date->notify_at)->format($inputFormat))
+        ->map(fn ($date) => $user->toLocal($date->notify_at)->format($inputFormat))
         ->values()
         ->all());
 @endphp
 
 <label for="final_at">Final date</label>
 <input id="final_at" type="datetime-local" name="final_at" required value="{{ $finalValue }}">
-<div class="muted">Timezone: <span id="timezone-label">{{ old('timezone', $reminder->exists ? $reminder->timezone : 'UTC') }}</span></div>
+<div class="muted">Timezone: {{ $user->timezone }} · <a href="{{ route('settings.edit') }}">Change in settings</a></div>
 @error('final_at') <div class="error">{{ $message }}</div> @enderror
-@error('timezone') <div class="error">{{ $message }}</div> @enderror
-<input id="timezone" type="hidden" name="timezone" value="{{ old('timezone', $reminder->exists ? $reminder->timezone : 'UTC') }}">
 
 @include('reminders._optional-list', [
     'name' => 'reminder_dates',
@@ -87,16 +87,3 @@
         });
     });
 </script>
-
-@if (! $reminder->exists && ! old('timezone'))
-    <script>
-        // New notifications default to the browser's timezone.
-        (function () {
-            var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            if (tz) {
-                document.getElementById('timezone').value = tz;
-                document.getElementById('timezone-label').textContent = tz;
-            }
-        })();
-    </script>
-@endif
