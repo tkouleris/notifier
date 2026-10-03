@@ -83,8 +83,37 @@ class ReminderTest extends TestCase
             ->create();
 
         $this->actingAs($user)->get("/notifications/{$reminder->id}/edit")
-            ->assertSee('name="reminder_dates[0]" value=""', false)
+            ->assertDontSee('name="reminder_dates[0]"', false)
             ->assertSee('Dates that have already been sent are not shown.');
+    }
+
+    public function test_the_create_form_starts_without_reminder_or_people_rows(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get('/notifications/create')
+            ->assertDontSee('name="reminder_dates[0]"', false)
+            ->assertDontSee('name="recipients[0]"', false)
+            ->assertSee('+ Add reminder')
+            ->assertSee('+ Add person');
+    }
+
+    public function test_rows_with_errors_are_shown_again_under_their_own_keys(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->from('/notifications/create')
+            ->followingRedirects()
+            ->post('/notifications', $this->validData([
+                'reminder_dates' => [2 => now()->subDay()->format(self::FORMAT)],
+                'recipients' => [5 => 'not-an-email'],
+            ]))
+            ->assertSee('name="reminder_dates[2]"', false)
+            ->assertSee('Reminders must be in the future.')
+            ->assertSee('name="recipients[5]" value="not-an-email"', false)
+            ->assertSee('Enter a valid email address.')
+            ->assertSee('data-next-key="6"', false);
     }
 
     public function test_a_notification_can_be_created_in_the_users_timezone(): void

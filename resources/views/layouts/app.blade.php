@@ -74,7 +74,11 @@
         .badge-failed { background: var(--danger-bg); color: var(--danger-text); }
         fieldset.optional-list { border: 0; padding: 0; margin: 1rem 0 0; }
         fieldset.optional-list legend { padding: 0; font-size: .9rem; }
-        fieldset.optional-list input { margin-top: .5rem; }
+        .list-row { margin-top: .5rem; }
+        .list-row-fields { display: flex; gap: .75rem; align-items: center; }
+        .list-row-fields input { margin-top: 0; flex: 1; min-width: 0; }
+        button.add-row { margin-top: .5rem; }
+        button[hidden] { display: none; }
         .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
         .logout { margin-top: 2rem; display: flex; gap: 1rem; align-items: center; }
         .theme-switch { display: flex; justify-content: flex-end; margin: -1rem -1rem 1rem 0; }

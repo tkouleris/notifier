@@ -27,15 +27,15 @@
 @error('timezone') <div class="error">{{ $message }}</div> @enderror
 <input id="timezone" type="hidden" name="timezone" value="{{ old('timezone', $reminder->exists ? $reminder->timezone : 'UTC') }}">
 
-<fieldset class="optional-list">
-    <legend>Reminders before the final date <span class="muted">(optional, up to {{ \App\Models\Reminder::MAX_EARLY_DATES }})</span></legend>
-    @error('reminder_dates') <div class="error">{{ $message }}</div> @enderror
-    @for ($i = 0; $i < \App\Models\Reminder::MAX_EARLY_DATES; $i++)
-        <label for="reminder-date-{{ $i }}" class="visually-hidden">Reminder {{ $i + 1 }}</label>
-        <input id="reminder-date-{{ $i }}" type="datetime-local" name="reminder_dates[{{ $i }}]" value="{{ $reminderValues[$i] ?? '' }}">
-        @error('reminder_dates.'.$i) <div class="error">{{ $message }}</div> @enderror
-    @endfor
-</fieldset>
+@include('reminders._optional-list', [
+    'name' => 'reminder_dates',
+    'legend' => 'Reminders before the final date',
+    'max' => \App\Models\Reminder::MAX_EARLY_DATES,
+    'values' => $reminderValues,
+    'type' => 'datetime-local',
+    'itemLabel' => 'Reminder date',
+    'addLabel' => 'Add reminder',
+])
 
 <label for="channel">Notify me by</label>
 <select id="channel" name="channel" required>
@@ -47,17 +47,46 @@
 </select>
 @error('channel') <div class="error">{{ $message }}</div> @enderror
 
-@php($recipients = old('recipients', $reminder->recipients->pluck('email')->all()))
-<fieldset class="optional-list">
-    <legend>Also notify <span class="muted">(optional, up to {{ \App\Models\Reminder::MAX_RECIPIENTS }} people)</span></legend>
-    @error('recipients') <div class="error">{{ $message }}</div> @enderror
-    @for ($i = 0; $i < \App\Models\Reminder::MAX_RECIPIENTS; $i++)
-        <label for="recipient-{{ $i }}" class="visually-hidden">Person {{ $i + 1 }} email</label>
-        <input id="recipient-{{ $i }}" type="email" name="recipients[{{ $i }}]" maxlength="255"
-               value="{{ $recipients[$i] ?? '' }}" placeholder="name@example.com" autocomplete="off">
-        @error('recipients.'.$i) <div class="error">{{ $message }}</div> @enderror
-    @endfor
-</fieldset>
+@include('reminders._optional-list', [
+    'name' => 'recipients',
+    'legend' => 'Also notify',
+    'max' => \App\Models\Reminder::MAX_RECIPIENTS,
+    'values' => old('recipients', $reminder->recipients->pluck('email')->all()),
+    'type' => 'email',
+    'attributes' => 'maxlength="255" placeholder="name@example.com" autocomplete="off"',
+    'itemLabel' => 'Email of person to notify',
+    'addLabel' => 'Add person',
+])
+
+<script>
+    // "+" adds a row to an optional list (up to its maximum); "Remove" drops one.
+    document.querySelectorAll('[data-optional-list]').forEach(function (list) {
+        var rows = list.querySelector('[data-rows]');
+        var template = list.querySelector('template');
+        var addButton = list.querySelector('[data-add]');
+        var max = Number(list.dataset.max);
+        var nextKey = Number(list.dataset.nextKey);
+
+        function refresh() {
+            addButton.hidden = rows.querySelectorAll('[data-row]').length >= max;
+        }
+
+        addButton.addEventListener('click', function () {
+            var html = template.innerHTML.replace(/__KEY__/g, String(nextKey++));
+            rows.insertAdjacentHTML('beforeend', html);
+            rows.lastElementChild.querySelector('input').focus();
+            refresh();
+        });
+
+        rows.addEventListener('click', function (event) {
+            if (event.target.closest('[data-remove]')) {
+                event.target.closest('[data-row]').remove();
+                refresh();
+                addButton.focus();
+            }
+        });
+    });
+</script>
 
 @if (! $reminder->exists && ! old('timezone'))
     <script>
