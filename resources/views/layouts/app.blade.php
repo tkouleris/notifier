@@ -81,7 +81,8 @@
         button[hidden] { display: none; }
         .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
         .navbar { display: flex; flex-wrap: wrap; gap: .75rem 1.5rem; align-items: center; padding: .75rem 1.5rem; background: var(--surface); border-bottom: 1px solid var(--divider); }
-        .navbar .brand { font-weight: 600; color: var(--text); text-decoration: none; }
+        .navbar .brand, .brand { display: inline-flex; align-items: center; gap: .5rem; font-weight: 600; color: var(--text); text-decoration: none; }
+        .brand img { border-radius: 6px; }
         .navbar ul { display: flex; flex-wrap: wrap; gap: 1rem; list-style: none; margin: 0; padding: 0; }
         .navbar ul a { color: var(--muted); text-decoration: none; }
         .navbar ul a:hover, .navbar ul a[aria-current=page] { color: var(--text); }
@@ -100,7 +101,10 @@
 <body>
 @auth
     <nav class="navbar" aria-label="Main">
-        <a class="brand" href="{{ route('reminders.index') }}">{{ config('app.name') }}</a>
+        <a class="brand" href="{{ route('reminders.index') }}">
+            <img src="{{ asset('images/logo-mark.png') }}" alt="" width="32" height="32">
+            {{ config('app.name') }}
+        </a>
         <ul>
             @foreach (['reminders.index' => 'Notifications', 'profile.edit' => 'Profile', 'settings.edit' => 'Settings'] as $route => $label)
                 <li><a href="{{ route($route) }}" @if (request()->routeIs(\Illuminate\Support\Str::before($route, '.').'.*')) aria-current="page" @endif>{{ $label }}</a></li>

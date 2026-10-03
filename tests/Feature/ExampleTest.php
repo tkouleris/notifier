@@ -16,6 +16,8 @@ class ExampleTest extends TestCase
             ->assertOk()
             ->assertSee('Never miss the dates that matter.')
             ->assertSee('How it works')
+            ->assertSee('images/logo-full.png')
+            ->assertSee('images/logo-mark.png')
             ->assertSee('href="'.route('register').'"', false)
             ->assertSee('href="'.route('login').'"', false);
     }

@@ -29,6 +29,7 @@ class ProfileTest extends TestCase
         $this->actingAs($user)->get('/notifications')
             ->assertSee('href="'.route('profile.edit').'"', false)
             ->assertSee('href="'.route('settings.edit').'"', false)
+            ->assertSee('images/logo-mark.png')
             ->assertSee('Thodoris')
             ->assertSee('Log out');
     }

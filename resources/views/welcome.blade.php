@@ -10,6 +10,7 @@
         .landing-top .brand { font-weight: 700; font-size: 1.1rem; color: var(--text); text-decoration: none; }
         .landing-top nav { display: flex; gap: 1rem; align-items: center; }
         .hero { display: grid; grid-template-columns: 1.15fr 1fr; gap: 3rem; align-items: center; padding: 3rem 0 4rem; }
+        .hero-logo { display: block; margin-bottom: 1.5rem; border-radius: 16px; box-shadow: 0 1px 3px var(--shadow); }
         .eyebrow { display: inline-block; font-size: .8rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--info-text); background: var(--info-bg); padding: .3rem .7rem; border-radius: 999px; }
         .hero h1 { font-size: clamp(2rem, 5vw, 3rem); line-height: 1.1; margin: 1rem 0; letter-spacing: -.02em; }
         .hero .lead { font-size: 1.15rem; line-height: 1.6; color: var(--muted); margin: 0 0 2rem; }
@@ -53,7 +54,10 @@
 @section('content')
     @guest
         <div class="landing-top">
-            <a class="brand" href="{{ url('/') }}">{{ config('app.name') }}</a>
+            <a class="brand" href="{{ url('/') }}">
+                <img src="{{ asset('images/logo-mark.png') }}" alt="" width="36" height="36">
+                {{ config('app.name') }}
+            </a>
             <nav>
                 <a href="{{ route('login') }}">Log in</a>
                 <a class="button" href="{{ route('register') }}">Sign up</a>
@@ -63,6 +67,7 @@
 
     <section class="hero">
         <div>
+            <img class="hero-logo" src="{{ asset('images/logo-full.png') }}" alt="{{ config('app.name') }} logo" width="138" height="132">
             <span class="eyebrow">Email reminders, on your schedule</span>
             <h1>Never miss the dates that matter.</h1>
             <p class="lead">
