@@ -53,7 +53,7 @@
         a { color: var(--link); }
         main { max-width: 420px; margin: 4rem auto; background: var(--surface); padding: 2rem; border-radius: 8px; box-shadow: 0 1px 3px var(--shadow); }
         label { display: block; margin-top: 1rem; font-size: .9rem; }
-        input[type=text], input[type=email], input[type=password], input[type=datetime-local], input[type=date], textarea, select { width: 100%; padding: .5rem; margin-top: .25rem; box-sizing: border-box; border: 1px solid var(--border); border-radius: 4px; font: inherit; background: var(--surface); color: var(--text); }
+        input[type=text], input[type=email], input[type=password], input[type=datetime-local], input[type=date], input[type=number], textarea, select { width: 100%; padding: .5rem; margin-top: .25rem; box-sizing: border-box; border: 1px solid var(--border); border-radius: 4px; font: inherit; background: var(--surface); color: var(--text); }
         button { margin-top: 1.25rem; padding: .55rem 1.1rem; background: var(--primary-bg); color: var(--primary-text); border: 0; border-radius: 4px; cursor: pointer; }
         .error { color: var(--danger); font-size: .85rem; margin-top: .25rem; }
         .status { background: var(--success-bg); color: var(--success-text); padding: .75rem; border-radius: 4px; margin-bottom: 1rem; }
@@ -65,6 +65,7 @@
         button.link.danger { color: var(--danger); }
         .header { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
         .header h1 { margin: 0; }
+        .header-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
         .table-wrap { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
         th, td { text-align: left; padding: .65rem .5rem; border-bottom: 1px solid var(--divider); vertical-align: top; }
@@ -82,6 +83,7 @@
         .list-row-fields input { margin-top: 0; flex: 1; min-width: 0; }
         button.add-row { margin-top: .5rem; }
         button[hidden] { display: none; }
+        .date-parts { display: grid; grid-template-columns: 1fr 2fr 1.2fr; gap: .75rem; }
         .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
         .navbar { display: flex; flex-wrap: wrap; gap: .75rem 1.5rem; align-items: center; padding: .75rem 1.5rem; background: var(--surface); border-bottom: 1px solid var(--divider); }
         .navbar .brand, .brand { display: inline-flex; align-items: center; gap: .5rem; font-weight: 600; color: var(--text); text-decoration: none; }

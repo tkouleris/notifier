@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ReminderChannel;
 use App\Enums\ReminderStatus;
+use App\Enums\ReminderType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -26,20 +27,35 @@ class Reminder extends Model
      */
     public const MAX_EARLY_DATES = 4;
 
+    /**
+     * Birthday cards go out at this hour, local to the reminder's timezone.
+     */
+    public const BIRTHDAY_SEND_HOUR = 9;
+
     protected $fillable = [
+        'type',
         'title',
         'message',
+        'email',
+        'birth_day',
+        'birth_month',
+        'birth_year',
         'timezone',
         'channel',
     ];
 
     protected $attributes = [
+        'type' => 'standard',
         'channel' => 'email',
         'timezone' => 'UTC',
     ];
 
     protected $casts = [
+        'type' => ReminderType::class,
         'channel' => ReminderChannel::class,
+        'birth_day' => 'integer',
+        'birth_month' => 'integer',
+        'birth_year' => 'integer',
     ];
 
     public function user(): BelongsTo
@@ -115,5 +131,59 @@ class Reminder extends Model
         ]);
 
         $this->unsetRelation('dates')->unsetRelation('finalDate');
+    }
+
+    public function isBirthday(): bool
+    {
+        return $this->type === ReminderType::Birthday;
+    }
+
+    /**
+     * The first birthday card moment after the given time, in UTC. A February 29
+     * birthday falls on February 28 in other years.
+     */
+    public function nextBirthday(?Carbon $after = null): Carbon
+    {
+        $after ??= now();
+        $year = $after->copy()->setTimezone($this->timezone)->year;
+
+        do {
+            $date = $this->birthdayIn($year++);
+        } while (! $date->gt($after));
+
+        return $date;
+    }
+
+    /**
+     * How old the person turns on the given date, when their birth year is known.
+     */
+    public function ageOn(Carbon $date): ?int
+    {
+        if (! $this->birth_year) {
+            return null;
+        }
+
+        $age = $date->copy()->setTimezone($this->timezone)->year - $this->birth_year;
+
+        return $age > 0 ? $age : null;
+    }
+
+    /**
+     * After a birthday card goes out, schedule next year's and drop older history,
+     * keeping only the card just sent and the next one.
+     */
+    public function scheduleNextBirthday(ReminderDate $sent): void
+    {
+        $this->dates()->whereKeyNot($sent->getKey())->where('status', '!=', ReminderStatus::Pending)->delete();
+        $this->dates()->create(['notify_at' => $this->nextBirthday($sent->notify_at), 'is_final' => true]);
+
+        $this->unsetRelation('dates')->unsetRelation('finalDate');
+    }
+
+    private function birthdayIn(int $year): Carbon
+    {
+        $date = Carbon::create($year, $this->birth_month, 1, self::BIRTHDAY_SEND_HOUR, 0, 0, $this->timezone);
+
+        return $date->day(min($this->birth_day, $date->daysInMonth))->utc();
     }
 }

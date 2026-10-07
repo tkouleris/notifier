@@ -6,7 +6,10 @@
 @section('content')
     <div class="header">
         <h1>My notifications</h1>
-        <a class="button" href="{{ route('reminders.create') }}">New notification</a>
+        <div class="header-actions">
+            <a class="button" href="{{ route('birthdays.create') }}">New birthday</a>
+            <a class="button" href="{{ route('reminders.create') }}">New notification</a>
+        </div>
     </div>
 
     @if (request()->boolean('verified'))
@@ -36,6 +39,12 @@
                         <tr>
                             <td>
                                 <strong>{{ $reminder->title }}</strong>
+                                @if ($reminder->isBirthday())
+                                    <div class="muted">
+                                        🎂 Birthday {{ \Illuminate\Support\Carbon::create(2000, $reminder->birth_month, $reminder->birth_day)->format('F j') }}{{ $reminder->birth_year ? ', '.$reminder->birth_year : '' }}
+                                        · every year to {{ $reminder->email }}
+                                    </div>
+                                @endif
                                 @if ($reminder->message)
                                     <div class="muted">{{ \Illuminate\Support\Str::limit($reminder->message, 80) }}</div>
                                 @endif
@@ -46,7 +55,7 @@
                             <td>
                                 @foreach ($reminder->dates as $date)
                                     <div @class(['muted' => ! $date->is_final])>
-                                        {{ $date->is_final ? 'Final' : 'Reminder' }}:
+                                        {{ $reminder->isBirthday() ? 'Card' : ($date->is_final ? 'Final' : 'Reminder') }}:
                                         {{ auth()->user()->toLocal($date->notify_at)->format('M j, Y H:i') }}
                                         @if ($date->status !== \App\Enums\ReminderStatus::Pending)
                                             <span class="badge badge-{{ $date->status->value }}">{{ $date->status->label() }}</span>
@@ -58,7 +67,7 @@
                             @php($status = $reminder->status())
                             <td><span class="badge badge-{{ $status->value }}">{{ $status->label() }}</span></td>
                             <td class="actions">
-                                <a href="{{ route('reminders.edit', $reminder) }}">Edit</a>
+                                <a href="{{ route($reminder->isBirthday() ? 'birthdays.edit' : 'reminders.edit', $reminder) }}">Edit</a>
                                 <form method="POST" action="{{ route('reminders.destroy', $reminder) }}"
                                       onsubmit="return confirm('Delete this notification?')">
                                     @csrf

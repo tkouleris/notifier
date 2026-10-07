@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\ReminderChannel;
+use App\Enums\ReminderType;
 use App\Models\Reminder;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -23,14 +24,29 @@ class ReminderFactory extends Factory
         ];
     }
 
+    public function birthday(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'type' => ReminderType::Birthday,
+            'title' => fake()->firstName(),
+            'message' => null,
+            'email' => fake()->safeEmail(),
+            'birth_day' => 15,
+            'birth_month' => 3,
+            'birth_year' => null,
+        ]);
+    }
+
     /**
-     * Every reminder needs a final date; give it one tomorrow unless the test built its own.
+     * Every reminder needs a final date; give it one tomorrow (or on the next birthday)
+     * unless the test built its own.
      */
     public function configure(): static
     {
         return $this->afterCreating(function (Reminder $reminder) {
             if ($reminder->dates()->doesntExist()) {
-                $reminder->dates()->create(['notify_at' => now()->addDay(), 'is_final' => true]);
+                $notifyAt = $reminder->isBirthday() ? $reminder->nextBirthday() : now()->addDay();
+                $reminder->dates()->create(['notify_at' => $notifyAt, 'is_final' => true]);
             }
         });
     }

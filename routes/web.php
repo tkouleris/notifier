@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BirthdayController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReminderController;
 use App\Http\Controllers\SettingsController;
@@ -48,6 +49,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/settings', [SettingsController::class, 'edit'])->name('settings.edit');
     Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
+
+    // Birthdays are listed and deleted with the other notifications; only their form differs.
+    Route::resource('notifications/birthdays', BirthdayController::class)
+        ->only(['create', 'store', 'edit', 'update'])
+        ->parameters(['birthdays' => 'reminder'])
+        ->names('birthdays');
 
     Route::resource('notifications', ReminderController::class)
         ->except('show')

@@ -27,6 +27,10 @@ class ReminderDue extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
+        if ($this->reminder->isBirthday()) {
+            return $this->birthdayCard();
+        }
+
         $isOwner = $notifiable instanceof User && $notifiable->is($this->reminder->user);
 
         $mail = (new MailMessage)->subject(
@@ -54,6 +58,34 @@ class ReminderDue extends Notification
         return $isOwner
             ? $mail->action('View your notifications', route('reminders.index'))
             : $mail;
+    }
+
+    /**
+     * The yearly card, addressed to the birthday person on behalf of the owner.
+     */
+    private function birthdayCard(): MailMessage
+    {
+        $owner = $this->reminder->user;
+        $age = $this->reminder->ageOn($this->date->notify_at);
+        $wish = ($age ? 'Happy '.$this->ordinal($age).' birthday' : 'Happy birthday').', '.$this->reminder->title.'!';
+
+        $mail = (new MailMessage)
+            ->subject($wish.' 🎂')
+            ->greeting($wish.' 🎂')
+            ->line($owner->name.' is thinking of you today and wishes you a wonderful year ahead.');
+
+        if ($this->reminder->message) {
+            $mail->line($this->reminder->message);
+        }
+
+        return $mail->salutation('With love, '.$owner->name);
+    }
+
+    private function ordinal(int $number): string
+    {
+        $suffix = in_array($number % 100, [11, 12, 13], true) ? 'th' : (['th', 'st', 'nd', 'rd'][$number % 10] ?? 'th');
+
+        return $number.$suffix;
     }
 
     private function finalDateText(): string

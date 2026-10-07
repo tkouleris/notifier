@@ -34,18 +34,26 @@ class SendDueReminders extends Command
     }
 
     /**
-     * Queue a separate job for the owner and for every extra recipient. The date is
-     * marked sent first so it isn't picked up again; any job that finally fails
+     * Queue a separate job for the owner and for every extra recipient; a birthday
+     * card goes only to the birthday person and next year's is scheduled. The date
+     * is marked sent first so it isn't picked up again; any job that finally fails
      * flips it to failed.
      */
     private function dispatchFor(ReminderDate $date): int
     {
         $date->update(['status' => ReminderStatus::Sent, 'sent_at' => now()]);
+        $reminder = $date->reminder;
 
-        $jobs = [
-            new SendReminderEmail($date),
-            ...$date->reminder->recipients->map(fn ($recipient) => new SendReminderEmail($date, $recipient->email)),
-        ];
+        if ($reminder->isBirthday()) {
+            $reminder->scheduleNextBirthday($date);
+        }
+
+        $jobs = $reminder->isBirthday()
+            ? [new SendReminderEmail($date, $reminder->email)]
+            : [
+                new SendReminderEmail($date),
+                ...$reminder->recipients->map(fn ($recipient) => new SendReminderEmail($date, $recipient->email)),
+            ];
 
         foreach ($jobs as $job) {
             try {
