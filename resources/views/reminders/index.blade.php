@@ -49,7 +49,7 @@
                                     <div class="muted">{{ \Illuminate\Support\Str::limit($reminder->message, 80) }}</div>
                                 @endif
                             </td>
-                            <td>
+                            <td class="dates">
                                 @foreach ($reminder->dates as $date)
                                     <div @class(['muted' => !$date->is_final])>
                                         {{ $reminder->isBirthday() ? 'Card' : ($date->is_final ? 'Final' : 'Reminder') }}:

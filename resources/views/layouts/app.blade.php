@@ -72,6 +72,7 @@
         th { font-size: .8rem; text-transform: uppercase; color: var(--muted); }
         .actions { white-space: nowrap; }
         .actions form { display: inline; margin-left: .75rem; }
+        .dates { white-space: nowrap; }
         .badge { display: inline-block; padding: .15rem .5rem; border-radius: 999px; font-size: .8rem; }
         .badge-pending { background: var(--info-bg); color: var(--info-text); }
         .badge-sent { background: var(--success-bg); color: var(--success-text); }
