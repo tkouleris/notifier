@@ -38,6 +38,7 @@ class Reminder extends Model
         'title',
         'message',
         'email',
+        'sender_name',
         'birth_day',
         'birth_month',
         'birth_year',

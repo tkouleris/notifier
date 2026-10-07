@@ -43,6 +43,11 @@
 <textarea id="message" name="message" rows="4" maxlength="5000">{{ old('message', $reminder->message) }}</textarea>
 @error('message') <div class="error">{{ $message }}</div> @enderror
 
+<label for="sender_name">From</label>
+<input id="sender_name" type="text" name="sender_name" value="{{ old('sender_name', $reminder->sender_name ?: auth()->user()->name) }}" required maxlength="255">
+<div class="muted">The card is signed with this name.</div>
+@error('sender_name') <div class="error">{{ $message }}</div> @enderror
+
 @php($selectedLayout = old('layout', $reminder->layout?->value ?? \App\Enums\BirthdayLayout::Balloons->value))
 <fieldset class="layout-picker">
     <legend>Card layout</legend>

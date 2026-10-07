@@ -28,6 +28,7 @@ class BirthdayRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255'],
+            'sender_name' => ['required', 'string', 'max:255'],
             'day' => ['required', 'integer', 'between:1,31'],
             'month' => ['required', 'integer', 'between:1,12'],
             'year' => ['nullable', 'integer', 'min:1900', 'max:'.now()->year],
@@ -69,6 +70,7 @@ class BirthdayRequest extends FormRequest
             'type' => ReminderType::Birthday,
             'title' => $this->validated('name'),
             'email' => $this->validated('email'),
+            'sender_name' => $this->validated('sender_name'),
             'birth_day' => (int) $this->validated('day'),
             'birth_month' => (int) $this->validated('month'),
             'birth_year' => $year === null ? null : (int) $year,

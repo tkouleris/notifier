@@ -28,7 +28,46 @@ class BirthdayTest extends TestCase
             'day' => 15,
             'month' => 3,
             'layout' => 'balloons',
+            'sender_name' => 'Thodoris',
         ];
+    }
+
+    public function test_the_sender_name_defaults_to_the_users_name(): void
+    {
+        $user = User::factory()->create(['name' => 'Thodoris Kouleris']);
+        $reminder = Reminder::factory()->birthday()->for($user)->create(['sender_name' => 'Uncle Tom']);
+
+        $this->actingAs($user)->get('/notifications/birthdays/create')
+            ->assertSee('name="sender_name" value="Thodoris Kouleris"', false);
+        $this->actingAs($user)->get("/notifications/birthdays/{$reminder->id}/edit")
+            ->assertSee('name="sender_name" value="Uncle Tom"', false);
+    }
+
+    public function test_the_sender_name_is_required_and_saved(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post('/notifications/birthdays', ['sender_name' => ''] + $this->validData())
+            ->assertSessionHasErrors('sender_name');
+
+        $this->actingAs($user)->post('/notifications/birthdays', $this->validData(['sender_name' => 'Uncle Tom']))
+            ->assertSessionHasNoErrors();
+        $this->assertSame('Uncle Tom', $user->reminders()->sole()->sender_name);
+    }
+
+    public function test_the_card_is_signed_and_sent_by_the_sender_name(): void
+    {
+        $owner = User::factory()->create(['name' => 'Thodoris']);
+        $reminder = Reminder::factory()->birthday()->for($owner)->create(['title' => 'Maria', 'sender_name' => 'Uncle Tom']);
+
+        $mail = (new ReminderDue($reminder->finalDate))->toMail(Notification::route('mail', 'maria@example.com'));
+
+        $this->assertSame([config('mail.from.address'), 'Uncle Tom'], $mail->from);
+        $this->assertSame('With love, Uncle Tom', $mail->salutation);
+        $this->assertSame(['Uncle Tom is thinking of you today and wishes you a wonderful year ahead.'], $mail->introLines);
+        $html = (string) $mail->render();
+        $this->assertStringContainsString('With love, Uncle Tom', $html);
+        $this->assertStringNotContainsString('Thodoris', $html);
     }
 
     public function test_the_form_offers_every_layout_and_remembers_the_chosen_one(): void

@@ -66,13 +66,16 @@ class ReminderDue extends Notification
      */
     private function birthdayCard(): MailMessage
     {
-        $owner = $this->reminder->user;
+        // Cards saved before the sender name existed are signed by the owner.
+        $sender = $this->reminder->sender_name ?: $this->reminder->user->name;
         $age = $this->reminder->ageOn($this->date->notify_at);
         $wish = ($age ? 'Happy '.$this->ordinal($age).' birthday' : 'Happy birthday').', '.$this->reminder->title.'!';
-        $intro = $owner->name.' is thinking of you today and wishes you a wonderful year ahead.';
-        $salutation = 'With love, '.$owner->name;
+        $intro = $sender.' is thinking of you today and wishes you a wonderful year ahead.';
+        $salutation = 'With love, '.$sender;
 
+        // The app's address sends it, but the inbox shows who the card is from.
         $mail = (new MailMessage)
+            ->from(config('mail.from.address'), $sender)
             ->subject($wish.' 🎂')
             ->greeting($wish.' 🎂')
             ->line($intro);
@@ -93,7 +96,7 @@ class ReminderDue extends Notification
                 'wish' => $wish,
                 'intro' => $intro,
                 'note' => $this->reminder->message,
-                'sender' => $owner->name,
+                'sender' => $sender,
             ]
         );
     }
