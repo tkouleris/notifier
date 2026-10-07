@@ -14,6 +14,7 @@ php artisan migrate
 php artisan serve                 # dev server on :8000
 php artisan schedule:work         # runs reminders:send every minute locally
 php artisan reminders:send        # send due reminders once by hand
+php artisan reminders:test 12     # email reminder 12's final date to its owner now, as a test
 php artisan queue:work            # only needed when QUEUE_CONNECTION=database
 
 php artisan test                                  # full suite
