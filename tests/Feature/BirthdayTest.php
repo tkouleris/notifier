@@ -12,6 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
+use RuntimeException;
 use Tests\TestCase;
 
 class BirthdayTest extends TestCase
@@ -160,7 +161,7 @@ class BirthdayTest extends TestCase
             ->assertOk()
             ->assertSee('New birthday')
             ->assertSee('Maria')
-            ->assertSee('Birthday March 15, 1990')
+            ->assertSeeInOrder(['Birthday', 'March 15, 1990'])
             ->assertSee('maria@example.com')
             ->assertDontSee('A secret wish');
     }
@@ -194,6 +195,17 @@ class BirthdayTest extends TestCase
             ['2028-03-15 09:00', '2029-03-15 09:00'],
             $reminder->dates()->get()->map(fn ($date) => $date->notify_at->format('Y-m-d H:i'))->all()
         );
+    }
+
+    public function test_a_card_that_finally_fails_marks_its_date_failed(): void
+    {
+        $reminder = Reminder::factory()->birthday()->create(['email' => 'maria@example.com']);
+        $date = $reminder->finalDate;
+        $date->update(['status' => ReminderStatus::Sent]);
+
+        (new SendReminderEmail($date, 'maria@example.com'))->failed(new RuntimeException('SMTP down'));
+
+        $this->assertSame(ReminderStatus::Failed, $date->fresh()->status);
     }
 
     public function test_the_card_wishes_happy_birthday_with_the_age_when_the_year_is_known(): void

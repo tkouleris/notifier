@@ -36,8 +36,8 @@ class SendDueReminders extends Command
     /**
      * Queue a separate job for the owner and for every extra recipient; a birthday
      * card goes only to the birthday person and next year's is scheduled. The date
-     * is marked sent first so it isn't picked up again; any job that finally fails
-     * flips it to failed.
+     * is marked sent first so it isn't picked up again; if the owner's email (or the
+     * birthday card) finally fails, it flips to failed.
      */
     private function dispatchFor(ReminderDate $date): int
     {

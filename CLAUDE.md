@@ -41,7 +41,7 @@ Tests use in-memory SQLite, the `sync` queue and the `array` mailer (see `phpuni
 **Sending pipeline:**
 1. `app/Console/Kernel.php` schedules `reminders:send` every minute (`withoutOverlapping`).
 2. `SendDueReminders` takes `ReminderDate::due()` (pending and `notify_at <= now()`), marks each date `sent` *before* dispatching, then dispatches one `SendReminderEmail` job for the owner and one per recipient.
-3. `SendReminderEmail` (3 tries, backoff 60s/300s, `deleteWhenMissingModels`) sends the `ReminderDue` notification — to the `User` for the owner, or an on-demand `Notification::route()` for recipients. Its `failed()` hook flips the date to `failed`.
+3. `SendReminderEmail` (3 tries, backoff 60s/300s, `deleteWhenMissingModels`) sends the `ReminderDue` notification — to the `User` for the owner, or an on-demand `Notification::route()` for recipients. Its `failed()` hook flips the date to `failed` only for the owner's job (or a birthday card); extra recipients' failures don't affect the status.
 4. `ReminderDue` changes subject ("Upcoming:" vs "Reminder:") and body depending on whether the date is final and whether the notifiable is the owner (only the owner gets the "View your notifications" link).
 
 Channels are abstracted through `ReminderChannel::driver()` (currently only email → `mail`); adding a channel means a new enum case plus notifiable routing.

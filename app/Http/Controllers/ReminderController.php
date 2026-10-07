@@ -18,7 +18,7 @@ class ReminderController extends Controller
         // Notifications with dates still to send come first, then by final date
         // (a birthday keeps last year's card too, so take the latest).
         $reminders = $request->user()->reminders()
-            ->with(['recipients', 'dates'])
+            ->with('dates')
             ->withExists(['dates as has_pending_dates' => fn ($query) => $query->where('status', ReminderStatus::Pending)])
             ->addSelect(['final_at' => ReminderDate::select('notify_at')
                 ->whereColumn('reminder_id', 'reminders.id')

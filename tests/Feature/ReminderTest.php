@@ -281,7 +281,8 @@ class ReminderTest extends TestCase
             $reminder->recipients()->orderBy('id')->pluck('email')->all()
         );
 
-        $this->actingAs($user)->get('/notifications')->assertSee('Also notifies anna@example.com, bob@example.com, carl@example.com');
+        // The list keeps the other people private; they only show on the edit form.
+        $this->actingAs($user)->get('/notifications')->assertOk()->assertDontSee('anna@example.com');
     }
 
     public function test_more_than_three_other_people_are_rejected(): void
@@ -399,10 +400,22 @@ class ReminderTest extends TestCase
         $date = $reminder->finalDate;
         $date->update(['status' => ReminderStatus::Sent]);
 
-        (new SendReminderEmail($date, 'a@example.com'))->failed(new RuntimeException('SMTP down'));
+        (new SendReminderEmail($date))->failed(new RuntimeException('SMTP down'));
 
         $this->assertSame(ReminderStatus::Failed, $date->fresh()->status);
         $this->assertSame(ReminderStatus::Failed, $reminder->fresh()->status());
+    }
+
+    public function test_the_status_ignores_emails_to_other_people(): void
+    {
+        $reminder = Reminder::factory()->has(ReminderDate::factory()->final()->due(), 'dates')->create();
+        $date = $reminder->finalDate;
+        $date->update(['status' => ReminderStatus::Sent]);
+
+        (new SendReminderEmail($date, 'a@example.com'))->failed(new RuntimeException('SMTP down'));
+
+        $this->assertSame(ReminderStatus::Sent, $date->fresh()->status);
+        $this->assertSame(ReminderStatus::Sent, $reminder->fresh()->status());
     }
 
     public function test_sent_dates_are_not_sent_twice(): void

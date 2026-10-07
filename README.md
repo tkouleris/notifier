@@ -138,8 +138,9 @@ php artisan queue:work
 
 Each email job retries itself up to 3 times, waiting 1 and then 5 minutes between attempts.
 
-A date is marked *sent* as soon as its emails are queued. If any of its emails still fails
-after all retries, the date is marked *failed*.
+A date is marked *sent* as soon as its emails are queued. If your own email (or a birthday
+card) still fails after all retries, the date is marked *failed*. The status shown in the
+list is about your email only; emails to the extra people don't change it.
 
 ### 3. Keep the worker running with Supervisor (Linux)
 

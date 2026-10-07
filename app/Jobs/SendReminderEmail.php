@@ -48,10 +48,13 @@ class SendReminderEmail implements ShouldQueue
     }
 
     /**
-     * Once every retry is used up, the whole date shows as failed.
+     * Once every retry is used up, the date shows as failed — but only for the email
+     * its status describes: the owner's, or a birthday card. Extra recipients don't count.
      */
     public function failed(Throwable $e): void
     {
-        $this->date->update(['status' => ReminderStatus::Failed]);
+        if ($this->email === null || $this->date->reminder->isBirthday()) {
+            $this->date->update(['status' => ReminderStatus::Failed]);
+        }
     }
 }
