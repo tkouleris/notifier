@@ -149,14 +149,20 @@ class BirthdayTest extends TestCase
     public function test_the_list_shows_birthdays(): void
     {
         $user = User::factory()->create();
-        Reminder::factory()->birthday()->for($user)->create(['title' => 'Maria', 'email' => 'maria@example.com', 'birth_year' => 1990]);
+        Reminder::factory()->birthday()->for($user)->create([
+            'title' => 'Maria',
+            'email' => 'maria@example.com',
+            'birth_year' => 1990,
+            'message' => 'A secret wish',
+        ]);
 
         $this->actingAs($user)->get('/notifications')
             ->assertOk()
             ->assertSee('New birthday')
             ->assertSee('Maria')
             ->assertSee('Birthday March 15, 1990')
-            ->assertSee('maria@example.com');
+            ->assertSee('maria@example.com')
+            ->assertDontSee('A secret wish');
     }
 
     public function test_the_card_goes_to_the_birthday_person_and_repeats_every_year(): void

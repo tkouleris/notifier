@@ -44,8 +44,7 @@
                                         🎂 Birthday {{ \Illuminate\Support\Carbon::create(2000, $reminder->birth_month, $reminder->birth_day)->format('F j') }}{{ $reminder->birth_year ? ', '.$reminder->birth_year : '' }}
                                         · every year to {{ $reminder->email }}
                                     </div>
-                                @endif
-                                @if ($reminder->message)
+                                @elseif ($reminder->message)
                                     <div class="muted">{{ \Illuminate\Support\Str::limit($reminder->message, 80) }}</div>
                                 @endif
                                 @if ($reminder->recipients->isNotEmpty())
