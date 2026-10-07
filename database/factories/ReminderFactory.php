@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\BirthdayLayout;
 use App\Enums\ReminderChannel;
 use App\Enums\ReminderType;
 use App\Models\Reminder;
@@ -34,6 +35,7 @@ class ReminderFactory extends Factory
             'birth_day' => 15,
             'birth_month' => 3,
             'birth_year' => null,
+            'layout' => BirthdayLayout::Balloons,
         ]);
     }
 

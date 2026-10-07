@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\BirthdayLayout;
 use App\Enums\ReminderStatus;
 use App\Enums\ReminderType;
 use App\Jobs\SendReminderEmail;
@@ -26,7 +27,89 @@ class BirthdayTest extends TestCase
             'email' => 'maria@example.com',
             'day' => 15,
             'month' => 3,
+            'layout' => 'balloons',
         ];
+    }
+
+    public function test_the_form_offers_every_layout_and_remembers_the_chosen_one(): void
+    {
+        $user = User::factory()->create();
+        $reminder = Reminder::factory()->birthday()->for($user)->create(['layout' => BirthdayLayout::Cake]);
+
+        $this->actingAs($user)->get('/notifications/birthdays/create')
+            ->assertOk()
+            ->assertSeeInOrder(['Balloons', 'Confetti', 'Cake'])
+            ->assertSee('name="layout" value="balloons" checked', false);
+        $this->actingAs($user)->get("/notifications/birthdays/{$reminder->id}/edit")
+            ->assertSee('name="layout" value="cake" checked', false)
+            ->assertDontSee('name="layout" value="balloons" checked', false);
+    }
+
+    public function test_the_chosen_layout_is_saved_and_must_be_a_known_one(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post('/notifications/birthdays', $this->validData(['layout' => 'confetti']))->assertSessionHasNoErrors();
+        $this->assertSame(BirthdayLayout::Confetti, $user->reminders()->sole()->layout);
+
+        $this->actingAs($user)->post('/notifications/birthdays', $this->validData(['layout' => 'disco']))
+            ->assertSessionHasErrors(['layout' => 'Choose one of the card layouts.']);
+        $this->actingAs($user)->post('/notifications/birthdays', ['layout' => null] + $this->validData())
+            ->assertSessionHasErrors('layout');
+    }
+
+    public function test_the_card_is_sent_with_the_chosen_layout(): void
+    {
+        // The next card goes out on March 15, 2027.
+        $this->travelTo(Carbon::parse('2026-10-07 12:00', 'UTC'));
+        $owner = User::factory()->create(['name' => 'Thodoris']);
+        $notifiable = Notification::route('mail', 'maria@example.com');
+
+        foreach (BirthdayLayout::cases() as $layout) {
+            $reminder = Reminder::factory()->birthday()->for($owner)->create([
+                'title' => 'Maria',
+                'birth_year' => 1997,
+                'message' => "Line one <b>\nLine two",
+                'layout' => $layout,
+            ]);
+            $mail = (new ReminderDue($reminder->finalDate))->toMail($notifiable);
+
+            $this->assertSame(['html' => "emails.birthdays.{$layout->value}", 'text' => 'emails.birthdays.text'], $mail->view);
+            $html = (string) $mail->render();
+            $this->assertStringContainsString('Happy 30th birthday, Maria!', $html);
+            $this->assertStringContainsString('Thodoris is thinking of you today', $html);
+            $this->assertStringContainsString('Line one &lt;b&gt;<br />', $html);
+            $this->assertStringContainsString('With love, Thodoris', $html);
+        }
+
+        $text = view('emails.birthdays.text', $mail->data())->render();
+        $this->assertStringContainsString("Line one <b>\nLine two", $text);
+        $this->assertStringContainsString('Happy 30th birthday, Maria! 🎂', $text);
+    }
+
+    public function test_cards_saved_without_a_layout_use_the_first_one(): void
+    {
+        $reminder = Reminder::factory()->birthday()->create(['layout' => null]);
+
+        $mail = (new ReminderDue($reminder->finalDate))->toMail(Notification::route('mail', 'maria@example.com'));
+
+        $this->assertSame('emails.birthdays.balloons', $mail->view['html']);
+    }
+
+    public function test_each_layout_can_be_previewed(): void
+    {
+        $user = User::factory()->create(['name' => 'Thodoris']);
+
+        foreach (BirthdayLayout::cases() as $layout) {
+            $this->actingAs($user)->get("/notifications/birthdays/layouts/{$layout->value}")
+                ->assertOk()
+                ->assertSee('Happy 30th birthday, Alex!')
+                ->assertSee('With love, Thodoris');
+        }
+
+        $this->actingAs($user)->get('/notifications/birthdays/layouts/disco')->assertNotFound();
+        auth()->logout();
+        $this->get('/notifications/birthdays/layouts/cake')->assertRedirect('/login');
     }
 
     public function test_create_and_edit_forms_can_be_rendered(): void

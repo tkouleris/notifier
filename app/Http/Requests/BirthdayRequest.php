@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\BirthdayLayout;
 use App\Enums\ReminderChannel;
 use App\Enums\ReminderType;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Enum;
 use Illuminate\Validation\Validator;
 
 class BirthdayRequest extends FormRequest
@@ -30,6 +32,7 @@ class BirthdayRequest extends FormRequest
             'month' => ['required', 'integer', 'between:1,12'],
             'year' => ['nullable', 'integer', 'min:1900', 'max:'.now()->year],
             'message' => ['nullable', 'string', 'max:5000'],
+            'layout' => ['required', new Enum(BirthdayLayout::class)],
         ];
     }
 
@@ -37,6 +40,7 @@ class BirthdayRequest extends FormRequest
     {
         return [
             'email.email' => 'Enter a valid email address.',
+            'layout' => 'Choose one of the card layouts.',
         ];
     }
 
@@ -69,6 +73,7 @@ class BirthdayRequest extends FormRequest
             'birth_month' => (int) $this->validated('month'),
             'birth_year' => $year === null ? null : (int) $year,
             'message' => $this->validated('message'),
+            'layout' => BirthdayLayout::from($this->validated('layout')),
             'timezone' => $this->user()->timezone,
             'channel' => ReminderChannel::Email,
         ];

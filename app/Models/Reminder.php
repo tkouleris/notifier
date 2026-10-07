@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\BirthdayLayout;
 use App\Enums\ReminderChannel;
 use App\Enums\ReminderStatus;
 use App\Enums\ReminderType;
@@ -40,6 +41,7 @@ class Reminder extends Model
         'birth_day',
         'birth_month',
         'birth_year',
+        'layout',
         'timezone',
         'channel',
     ];
@@ -56,6 +58,7 @@ class Reminder extends Model
         'birth_day' => 'integer',
         'birth_month' => 'integer',
         'birth_year' => 'integer',
+        'layout' => BirthdayLayout::class,
     ];
 
     public function user(): BelongsTo

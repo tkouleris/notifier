@@ -51,6 +51,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
 
     // Birthdays are listed and deleted with the other notifications; only their form differs.
+    Route::get('notifications/birthdays/layouts/{layout}', [BirthdayController::class, 'preview'])->name('birthdays.preview');
     Route::resource('notifications/birthdays', BirthdayController::class)
         ->only(['create', 'store', 'edit', 'update'])
         ->parameters(['birthdays' => 'reminder'])

@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Enums\BirthdayLayout;
 use App\Models\Reminder;
 use App\Models\ReminderDate;
 use App\Models\User;
@@ -68,17 +69,33 @@ class ReminderDue extends Notification
         $owner = $this->reminder->user;
         $age = $this->reminder->ageOn($this->date->notify_at);
         $wish = ($age ? 'Happy '.$this->ordinal($age).' birthday' : 'Happy birthday').', '.$this->reminder->title.'!';
+        $intro = $owner->name.' is thinking of you today and wishes you a wonderful year ahead.';
+        $salutation = 'With love, '.$owner->name;
 
         $mail = (new MailMessage)
             ->subject($wish.' 🎂')
             ->greeting($wish.' 🎂')
-            ->line($owner->name.' is thinking of you today and wishes you a wonderful year ahead.');
+            ->line($intro);
 
         if ($this->reminder->message) {
             $mail->line($this->reminder->message);
         }
 
-        return $mail->salutation('With love, '.$owner->name);
+        // Cards saved before layouts existed have none and get the first one.
+        $layout = $this->reminder->layout ?? BirthdayLayout::Balloons;
+
+        // The view data must not be called "message": mail views reserve it for the mail itself.
+        return $mail->salutation($salutation)->view(
+            ['html' => $layout->view(), 'text' => 'emails.birthdays.text'],
+            [
+                'name' => $this->reminder->title,
+                'age' => $age ? $this->ordinal($age) : null,
+                'wish' => $wish,
+                'intro' => $intro,
+                'note' => $this->reminder->message,
+                'sender' => $owner->name,
+            ]
+        );
     }
 
     private function ordinal(int $number): string
