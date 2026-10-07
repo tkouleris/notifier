@@ -34,9 +34,9 @@ class ReminderDue extends Notification
 
         $isOwner = $notifiable instanceof User && $notifiable->is($this->reminder->user);
 
-        $mail = (new MailMessage)->subject(
-            ($this->date->is_final ? 'Reminder: ' : 'Upcoming: ').$this->reminder->title
-        );
+        $mail = (new MailMessage)
+            ->theme($this->reminder->email_theme->mailTheme())
+            ->subject(($this->date->is_final ? 'Reminder: ' : 'Upcoming: ').$this->reminder->title);
 
         if ($isOwner) {
             $mail->greeting('Hello '.$notifiable->name.',');

@@ -45,6 +45,8 @@ Tests use in-memory SQLite, the `sync` queue and the `array` mailer (see `phpuni
 3. `SendReminderEmail` (3 tries, backoff 60s/300s, `deleteWhenMissingModels`) sends the `ReminderDue` notification — to the `User` for the owner, or an on-demand `Notification::route()` for recipients. Its `failed()` hook flips the date to `failed` only for the owner's job (or a birthday card); extra recipients' failures don't affect the status.
 4. `ReminderDue` changes subject ("Upcoming:" vs "Reminder:") and body depending on whether the date is final and whether the notifiable is the owner (only the owner gets the "View your notifications" link).
 
+**Email look:** the markdown mail header (`resources/views/vendor/mail/html/header.blade.php`, the only published mail component) shows the logo. Two themes live beside it, `notifier-light` (the default in `config/mail.php`, also used for auth emails) and `notifier-dark`. Each standard reminder picks one via `email_theme` (`Theme` enum, `mailTheme()`), previewable at `/notifications/themes/{theme}`.
+
 Channels are abstracted through `ReminderChannel::driver()` (currently only email → `mail`); adding a channel means a new enum case plus notifiable routing.
 
 **Auth:** custom controllers in `app/Http/Controllers/Auth` (no Breeze/Jetstream). `User` implements `MustVerifyEmail`; all app routes sit behind `auth` + `verified`. Theme (light/dark, `Theme` enum) is stored per user and toggled via `PUT /theme`, which only requires `auth`. Ownership checks go through `ReminderPolicy`.

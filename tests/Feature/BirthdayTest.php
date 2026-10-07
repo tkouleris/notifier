@@ -255,7 +255,7 @@ class BirthdayTest extends TestCase
         $other = Reminder::factory()->for($user)->create();
 
         $this->actingAs($user)->get("/notifications/{$birthday->id}/edit")->assertRedirect("/notifications/birthdays/{$birthday->id}/edit");
-        $this->actingAs($user)->put("/notifications/{$birthday->id}", ['title' => 'x', 'final_at' => now()->addDay()->format('Y-m-d\TH:i'), 'channel' => 'email'])->assertNotFound();
+        $this->actingAs($user)->put("/notifications/{$birthday->id}", ['title' => 'x', 'final_at' => now()->addDay()->format('Y-m-d\TH:i'), 'channel' => 'email', 'email_theme' => 'light'])->assertNotFound();
         $this->actingAs($user)->get("/notifications/birthdays/{$other->id}/edit")->assertNotFound();
         $this->actingAs($user)->put("/notifications/birthdays/{$other->id}", $this->validData())->assertNotFound();
     }

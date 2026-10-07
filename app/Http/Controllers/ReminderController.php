@@ -3,11 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ReminderStatus;
+use App\Enums\Theme;
 use App\Http\Requests\ReminderRequest;
 use App\Models\Reminder;
 use App\Models\ReminderDate;
+use App\Notifications\ReminderDue;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -74,6 +77,25 @@ class ReminderController extends Controller
         });
 
         return redirect()->route('reminders.index')->with('status', 'Notification updated.');
+    }
+
+    /**
+     * Show an email theme as a notification email would look, filled with sample details.
+     */
+    public function preview(Request $request, Theme $theme): Response
+    {
+        $reminder = new Reminder([
+            'title' => 'Renew your passport',
+            'message' => 'Bring two photos and your old passport.',
+            'email_theme' => $theme,
+            'timezone' => $request->user()->timezone,
+        ]);
+        $reminder->setRelation('user', $request->user());
+
+        $date = new ReminderDate(['notify_at' => now()->addWeek(), 'is_final' => true]);
+        $date->setRelation('reminder', $reminder);
+
+        return response((new ReminderDue($date))->toMail($request->user())->render());
     }
 
     public function destroy(Reminder $reminder): RedirectResponse

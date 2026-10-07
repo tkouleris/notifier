@@ -57,6 +57,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->parameters(['birthdays' => 'reminder'])
         ->names('birthdays');
 
+    Route::get('notifications/themes/{theme}', [ReminderController::class, 'preview'])->name('reminders.preview');
     Route::resource('notifications', ReminderController::class)
         ->except('show')
         ->parameters(['notifications' => 'reminder'])

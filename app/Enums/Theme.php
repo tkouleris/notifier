@@ -11,4 +11,12 @@ enum Theme: string
     {
         return ucfirst($this->value);
     }
+
+    /**
+     * The markdown mail theme (resources/views/vendor/mail/html/themes) for this look.
+     */
+    public function mailTheme(): string
+    {
+        return 'notifier-'.$this->value;
+    }
 }

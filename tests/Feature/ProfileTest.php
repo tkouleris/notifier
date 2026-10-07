@@ -131,6 +131,7 @@ class ProfileTest extends TestCase
             'title' => 'Call',
             'final_at' => $local->format('Y-m-d\TH:i'),
             'channel' => 'email',
+            'email_theme' => 'light',
         ]);
 
         $this->assertTrue($user->reminders()->sole()->finalDate->notify_at->eq($local->copy()->utc()));

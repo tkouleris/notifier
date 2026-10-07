@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\ReminderStatus;
+use App\Enums\Theme;
 use App\Jobs\SendReminderEmail;
 use App\Models\Reminder;
 use App\Models\ReminderDate;
@@ -26,7 +27,53 @@ class ReminderTest extends TestCase
             'title' => 'Team dinner',
             'final_at' => now()->addDays(10)->format(self::FORMAT),
             'channel' => 'email',
+            'email_theme' => 'light',
         ];
+    }
+
+    public function test_the_email_theme_is_chosen_saved_and_validated(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get('/notifications/create')
+            ->assertOk()
+            ->assertSee('name="email_theme" value="light" checked', false);
+
+        $this->actingAs($user)->post('/notifications', $this->validData(['email_theme' => 'dark']))->assertSessionHasNoErrors();
+        $reminder = $user->reminders()->sole();
+        $this->assertSame(Theme::Dark, $reminder->email_theme);
+        $this->actingAs($user)->get("/notifications/{$reminder->id}/edit")
+            ->assertSee('name="email_theme" value="dark" checked', false);
+
+        $this->actingAs($user)->post('/notifications', $this->validData(['email_theme' => 'neon']))
+            ->assertSessionHasErrors(['email_theme' => 'Choose the light or dark email theme.']);
+    }
+
+    public function test_emails_use_the_chosen_theme_and_show_the_logo(): void
+    {
+        $owner = User::factory()->create();
+
+        foreach (Theme::cases() as $theme) {
+            $reminder = Reminder::factory()->for($owner)->create(['email_theme' => $theme]);
+            $mail = (new ReminderDue($reminder->finalDate))->toMail($owner);
+
+            $this->assertSame("notifier-{$theme->value}", $mail->theme);
+            $html = (string) $mail->render();
+            $this->assertStringContainsString('src="'.asset('images/logo-mark.png').'"', $html);
+            $this->assertStringContainsString($theme === Theme::Dark ? 'background-color: #1a1d23' : 'background-color: #ffffff', $html);
+        }
+    }
+
+    public function test_each_email_theme_can_be_previewed(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get('/notifications/themes/dark')
+            ->assertOk()
+            ->assertSee('Bring two photos and your old passport.')
+            ->assertSee('images/logo-mark.png');
+        $this->actingAs($user)->get('/notifications/themes/light')->assertOk();
+        $this->actingAs($user)->get('/notifications/themes/neon')->assertNotFound();
     }
 
     public function test_guests_are_redirected_to_login(): void

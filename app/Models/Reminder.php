@@ -6,6 +6,7 @@ use App\Enums\BirthdayLayout;
 use App\Enums\ReminderChannel;
 use App\Enums\ReminderStatus;
 use App\Enums\ReminderType;
+use App\Enums\Theme;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -45,17 +46,20 @@ class Reminder extends Model
         'layout',
         'timezone',
         'channel',
+        'email_theme',
     ];
 
     protected $attributes = [
         'type' => 'standard',
         'channel' => 'email',
+        'email_theme' => 'light',
         'timezone' => 'UTC',
     ];
 
     protected $casts = [
         'type' => ReminderType::class,
         'channel' => ReminderChannel::class,
+        'email_theme' => Theme::class,
         'birth_day' => 'integer',
         'birth_month' => 'integer',
         'birth_year' => 'integer',

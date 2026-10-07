@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\ReminderChannel;
+use App\Enums\Theme;
 use App\Models\Reminder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Carbon;
@@ -47,6 +48,7 @@ class ReminderRequest extends FormRequest
             'reminder_dates' => ['nullable', 'array', 'max:'.Reminder::MAX_EARLY_DATES],
             'reminder_dates.*' => ['date_format:'.self::DATE_FORMAT, 'distinct'],
             'channel' => ['required', Rule::enum(ReminderChannel::class)],
+            'email_theme' => ['required', Rule::enum(Theme::class)],
             'recipients' => ['nullable', 'array', 'max:'.Reminder::MAX_RECIPIENTS],
             'recipients.*' => [
                 'string',
@@ -64,7 +66,8 @@ class ReminderRequest extends FormRequest
             'reminder_dates.max' => 'You can add at most :max reminders.',
             'reminder_dates.*.date_format' => 'Enter a valid date and time.',
             'reminder_dates.*.distinct' => 'This reminder date is listed more than once.',
-            'recipients.max' => 'You can notify at most :max other people.',
+            'email_theme' => 'Choose the light or dark email theme.',
+            'recipients.max' =>'You can notify at most :max other people.',
             'recipients.*.email' => 'Enter a valid email address.',
             'recipients.*.distinct' => 'This email address is listed more than once.',
             'recipients.*.not_in' => 'You are already notified; enter someone else\'s address.',
@@ -112,6 +115,7 @@ class ReminderRequest extends FormRequest
             'message' => $this->validated('message'),
             'timezone' => $this->user()->timezone,
             'channel' => $this->validated('channel'),
+            'email_theme' => $this->validated('email_theme'),
         ];
     }
 
