@@ -28,6 +28,9 @@
             --danger-text: #991b1b;
             --info-bg: #eff6ff;
             --info-text: #1e40af;
+            --icon-birthday: #db2777;
+            --icon-appointment: #2563eb;
+            --icon-standard: #d97706;
         }
         [data-theme=dark] {
             color-scheme: dark;
@@ -48,6 +51,9 @@
             --danger-text: #fca5a5;
             --info-bg: #172554;
             --info-text: #93c5fd;
+            --icon-birthday: #f472b6;
+            --icon-appointment: #60a5fa;
+            --icon-standard: #fbbf24;
         }
         body { font-family: system-ui, sans-serif; background: var(--bg); margin: 0; color: var(--text); }
         a { color: var(--link); }
@@ -62,7 +68,10 @@
         main.wide { max-width: 860px; }
         a.button { display: inline-block; padding: .55rem 1.1rem; background: var(--primary-bg); color: var(--primary-text); border-radius: 4px; text-decoration: none; }
         a.button .icon { vertical-align: -3px; margin-right: .35rem; }
-        .title-with-icon .icon { vertical-align: -3px; margin-right: .35rem; color: var(--muted); }
+        .title-with-icon .icon { vertical-align: -3px; margin-right: .35rem; }
+        .title-with-icon .icon-birthday { color: var(--icon-birthday); }
+        .title-with-icon .icon-appointment { color: var(--icon-appointment); }
+        .title-with-icon .icon-standard { color: var(--icon-standard); }
         button.link { margin: 0; padding: 0; background: none; color: var(--link); font: inherit; }
         button.link.danger { color: var(--danger); }
         .header { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
