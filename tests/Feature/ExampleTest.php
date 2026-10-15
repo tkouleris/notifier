@@ -23,12 +23,10 @@ class ExampleTest extends TestCase
             ->assertSee('href="'.route('login').'"', false);
     }
 
-    public function test_logged_in_users_are_pointed_to_their_notifications(): void
+    public function test_logged_in_users_are_redirected_to_their_notifications(): void
     {
         $this->actingAs(User::factory()->create())
             ->get('/')
-            ->assertOk()
-            ->assertSee('Go to my notifications')
-            ->assertDontSee('Create a free account');
+            ->assertRedirect(route('reminders.index'));
     }
 }

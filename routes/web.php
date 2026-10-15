@@ -31,9 +31,10 @@ Route::get('/test-mail', function () {
     return 'Email sent!';
 });
 
+// Logged-in users skip the landing page and go straight to their notifications.
 Route::get('/', function () {
     return view('welcome');
-});
+})->middleware('guest');
 
 // Unverified users can switch themes too, so this only needs a login.
 Route::put('/theme', [ThemeController::class, 'update'])->middleware('auth')->name('theme.update');
