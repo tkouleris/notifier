@@ -154,14 +154,14 @@ class ReminderRequest extends FormRequest
     /**
      * A submitted local time (in the timezone from the user's settings) converted to UTC.
      */
-    private function toUtc(string $value): Carbon
+    protected function toUtc(string $value): Carbon
     {
         return Carbon::createFromFormat(self::DATE_FORMAT, $value, $this->user()->timezone)
             ->second(0)
             ->utc();
     }
 
-    private function withoutBlanks(array $values): array
+    protected function withoutBlanks(array $values): array
     {
         return array_filter($values, fn ($value) => $value !== '' && $value !== null);
     }

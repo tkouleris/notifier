@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AppointmentMode;
 use App\Enums\BirthdayLayout;
 use App\Enums\ReminderChannel;
 use App\Enums\ReminderStatus;
@@ -34,6 +35,11 @@ class Reminder extends Model
      */
     public const BIRTHDAY_SEND_HOUR = 9;
 
+    /**
+     * The most people an appointment can be with besides its owner.
+     */
+    public const MAX_PARTICIPANTS = 5;
+
     protected $fillable = [
         'type',
         'title',
@@ -44,6 +50,12 @@ class Reminder extends Model
         'birth_month',
         'birth_year',
         'layout',
+        'appointment_mode',
+        'address',
+        'latitude',
+        'longitude',
+        'phone',
+        'meeting_url',
         'timezone',
         'channel',
         'email_theme',
@@ -64,6 +76,9 @@ class Reminder extends Model
         'birth_month' => 'integer',
         'birth_year' => 'integer',
         'layout' => BirthdayLayout::class,
+        'appointment_mode' => AppointmentMode::class,
+        'latitude' => 'float',
+        'longitude' => 'float',
     ];
 
     public function user(): BelongsTo
@@ -125,6 +140,20 @@ class Reminder extends Model
     }
 
     /**
+     * Replace an appointment's people; they are emailed like extra recipients.
+     *
+     * @param  array<int, array{name: string, email: string}>  $people
+     */
+    public function syncParticipants(array $people): void
+    {
+        $this->recipients()->delete();
+        $this->recipients()->createMany(array_map(fn (array $person) => [
+            'name' => $person['name'],
+            'email' => $person['email'],
+        ], $people));
+    }
+
+    /**
      * Replace every date with a fresh, pending schedule.
      *
      * @param  array<int, Carbon>  $earlyDates
@@ -144,6 +173,29 @@ class Reminder extends Model
     public function isBirthday(): bool
     {
         return $this->type === ReminderType::Birthday;
+    }
+
+    public function isAppointment(): bool
+    {
+        return $this->type === ReminderType::Appointment;
+    }
+
+    /**
+     * An OpenStreetMap link to an in-person appointment's place: the point picked
+     * on the map, or else a search for the typed address.
+     */
+    public function mapUrl(): ?string
+    {
+        if ($this->latitude !== null && $this->longitude !== null) {
+            return 'https://www.openstreetmap.org/?'.http_build_query([
+                'mlat' => $this->latitude,
+                'mlon' => $this->longitude,
+            ]).'#map=17/'.$this->latitude.'/'.$this->longitude;
+        }
+
+        return $this->address
+            ? 'https://www.openstreetmap.org/search?'.http_build_query(['query' => $this->address])
+            : null;
     }
 
     /**

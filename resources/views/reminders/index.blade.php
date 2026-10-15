@@ -8,6 +8,7 @@
         <h1>My notifications</h1>
         <div class="header-actions">
             <a class="button" href="{{ route('birthdays.create') }}">New birthday</a>
+            <a class="button" href="{{ route('appointments.create') }}">New appointment</a>
             <a class="button" href="{{ route('reminders.create') }}">New notification</a>
         </div>
     </div>
@@ -45,6 +46,12 @@
                                         {{ \Illuminate\Support\Carbon::create(2000, $reminder->birth_month, $reminder->birth_day)->format('F j') }}{{ $reminder->birth_year ? ', ' . $reminder->birth_year : '' }}
                                         · every year to {{ $reminder->email }}
                                     </div>
+                                @elseif ($reminder->isAppointment())
+                                    <div class="muted">
+                                        📅 {{ $reminder->appointment_mode?->label() ?? 'Appointment' }}
+                                        @if ($reminder->address) · {{ \Illuminate\Support\Str::limit($reminder->address, 60) }} @endif
+                                        @if ($reminder->recipients->isNotEmpty()) · with {{ $reminder->recipients->pluck('name')->join(', ') }} @endif
+                                    </div>
                                 @elseif ($reminder->message)
                                     <div class="muted">{{ \Illuminate\Support\Str::limit($reminder->message, 80) }}</div>
                                 @endif
@@ -52,7 +59,7 @@
                             <td class="dates">
                                 @foreach ($reminder->dates as $date)
                                     <div @class(['muted' => !$date->is_final])>
-                                        {{ $reminder->isBirthday() ? 'Card' : ($date->is_final ? 'Final' : 'Reminder') }}:
+                                        {{ $reminder->isBirthday() ? 'Card' : ($date->is_final ? ($reminder->isAppointment() ? 'Appointment' : 'Final') : 'Reminder') }}:
                                         {{ auth()->user()->toLocal($date->notify_at)->format('M j, Y H:i') }}
                                     </div>
                                 @endforeach
@@ -62,7 +69,7 @@
                             <td><span class="badge badge-{{ $status->value }}">{{ $status->label() }}</span></td>
                             <td class="actions">
                                 <a
-                                    href="{{ route($reminder->isBirthday() ? 'birthdays.edit' : 'reminders.edit', $reminder) }}">Edit</a>
+                                    href="{{ route(match (true) { $reminder->isBirthday() => 'birthdays.edit', $reminder->isAppointment() => 'appointments.edit', default => 'reminders.edit' }, $reminder) }}">Edit</a>
                                 <form method="POST" action="{{ route('reminders.destroy', $reminder) }}"
                                     onsubmit="return confirm('Delete this notification?')">
                                     @csrf

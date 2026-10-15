@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ReminderRecipient extends Model
 {
     protected $fillable = [
+        'name',
         'email',
     ];
 

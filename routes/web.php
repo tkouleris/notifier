@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\BirthdayController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReminderController;
@@ -56,6 +57,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->only(['create', 'store', 'edit', 'update'])
         ->parameters(['birthdays' => 'reminder'])
         ->names('birthdays');
+
+    Route::resource('notifications/appointments', AppointmentController::class)
+        ->only(['create', 'store', 'edit', 'update'])
+        ->parameters(['appointments' => 'reminder'])
+        ->names('appointments');
 
     Route::get('notifications/themes/{theme}', [ReminderController::class, 'preview'])->name('reminders.preview');
     Route::resource('notifications', ReminderController::class)

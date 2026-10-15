@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\AppointmentMode;
 use App\Enums\BirthdayLayout;
 use App\Enums\ReminderChannel;
 use App\Enums\ReminderType;
@@ -36,6 +37,17 @@ class ReminderFactory extends Factory
             'birth_month' => 3,
             'birth_year' => null,
             'layout' => BirthdayLayout::Balloons,
+        ]);
+    }
+
+    public function appointment(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'type' => ReminderType::Appointment,
+            'appointment_mode' => AppointmentMode::InPerson,
+            'address' => 'Ermou 10, Athens',
+            'latitude' => 37.9755,
+            'longitude' => 23.7348,
         ]);
     }
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ReminderStatus;
+use App\Enums\ReminderType;
 use App\Enums\Theme;
 use App\Http\Requests\ReminderRequest;
 use App\Models\Reminder;
@@ -21,7 +22,7 @@ class ReminderController extends Controller
         // Notifications with dates still to send come first, then by final date
         // (a birthday keeps last year's card too, so take the latest).
         $reminders = $request->user()->reminders()
-            ->with('dates')
+            ->with('dates', 'recipients')
             ->withExists(['dates as has_pending_dates' => fn ($query) => $query->where('status', ReminderStatus::Pending)])
             ->addSelect(['final_at' => ReminderDate::select('notify_at')
                 ->whereColumn('reminder_id', 'reminders.id')
@@ -59,6 +60,10 @@ class ReminderController extends Controller
             return redirect()->route('birthdays.edit', $reminder);
         }
 
+        if ($reminder->isAppointment()) {
+            return redirect()->route('appointments.edit', $reminder);
+        }
+
         $reminder->load('dates', 'recipients');
 
         return view('reminders.edit', compact('reminder'));
@@ -67,7 +72,7 @@ class ReminderController extends Controller
     public function update(ReminderRequest $request, Reminder $reminder): RedirectResponse
     {
         $this->authorize('update', $reminder);
-        abort_if($reminder->isBirthday(), 404);
+        abort_unless($reminder->type === ReminderType::Standard, 404);
 
         // Saving replaces the whole schedule; every date (all in the future, per validation) is pending again.
         DB::transaction(function () use ($request, $reminder) {

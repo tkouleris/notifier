@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Enums\AppointmentMode;
 use App\Enums\BirthdayLayout;
 use App\Models\Reminder;
 use App\Models\ReminderDate;
@@ -34,6 +35,10 @@ class ReminderDue extends Notification
 
         $isOwner = $notifiable instanceof User && $notifiable->is($this->reminder->user);
 
+        if ($this->reminder->isAppointment()) {
+            return $this->appointment($notifiable, $isOwner);
+        }
+
         $mail = (new MailMessage)
             ->theme($this->reminder->email_theme->mailTheme())
             ->subject(($this->date->is_final ? 'Reminder: ' : 'Upcoming: ').$this->reminder->title);
@@ -59,6 +64,73 @@ class ReminderDue extends Notification
         return $isOwner
             ? $mail->action('View your notifications', route('reminders.index'))
             : $mail;
+    }
+
+    /**
+     * When, how and with whom the appointment is, sent to the owner and to each person in it.
+     */
+    private function appointment(object $notifiable, bool $isOwner): MailMessage
+    {
+        $reminder = $this->reminder;
+        $owner = $reminder->user;
+        $mode = $reminder->appointment_mode;
+
+        $mail = (new MailMessage)
+            ->theme($reminder->email_theme->mailTheme())
+            ->subject(($this->date->is_final ? 'Appointment: ' : 'Upcoming appointment: ').$reminder->title);
+
+        if ($isOwner) {
+            $mail->greeting('Hello '.$notifiable->name.',');
+            $with = $reminder->recipients->pluck('name');
+        } else {
+            $email = $notifiable->routes['mail'] ?? null;
+            $person = $reminder->recipients->firstWhere('email', $email);
+            $mail->greeting($person?->name ? 'Hello '.$person->name.',' : 'Hello,')
+                ->line($owner->name.' has an appointment with you.');
+            $with = $reminder->recipients->reject(fn ($recipient) => $recipient->email === $email)
+                ->pluck('name')
+                ->prepend($owner->name);
+        }
+
+        $mail->line($reminder->title)
+            ->line('When: '.$this->finalDateText());
+
+        if ($mode) {
+            $mail->line('How: '.$mode->label());
+        }
+
+        if ($with->isNotEmpty()) {
+            $mail->line('With: '.$with->join(', ', ' and '));
+        }
+
+        $action = null;
+
+        if ($mode === AppointmentMode::InPerson && $reminder->address) {
+            $mail->line('Where: '.$reminder->address);
+            $action = ['Open map', $reminder->mapUrl()];
+        } elseif ($mode === AppointmentMode::Phone && $reminder->phone) {
+            $mail->line('Phone: '.$reminder->phone);
+        } elseif ($mode === AppointmentMode::Online && $reminder->meeting_url) {
+            $action = ['Join meeting', $reminder->meeting_url];
+        }
+
+        if ($reminder->message) {
+            $mail->line($reminder->message);
+        }
+
+        // An email has one button: the place or meeting link wins, and the owner's
+        // link to their notifications becomes a plain link below it.
+        if ($action) {
+            $mail->action(...$action);
+        }
+
+        if ($isOwner) {
+            $action
+                ? $mail->line('[View your notifications]('.route('reminders.index').')')
+                : $mail->action('View your notifications', route('reminders.index'));
+        }
+
+        return $mail;
     }
 
     /**
