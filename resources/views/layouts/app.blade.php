@@ -31,6 +31,9 @@
             --icon-birthday: #db2777;
             --icon-appointment: #2563eb;
             --icon-standard: #d97706;
+            --button-icon-birthday: #f472b6;
+            --button-icon-appointment: #60a5fa;
+            --button-icon-standard: #fbbf24;
         }
         [data-theme=dark] {
             color-scheme: dark;
@@ -54,6 +57,9 @@
             --icon-birthday: #f472b6;
             --icon-appointment: #60a5fa;
             --icon-standard: #fbbf24;
+            --button-icon-birthday: #db2777;
+            --button-icon-appointment: #2563eb;
+            --button-icon-standard: #b45309;
         }
         body { font-family: system-ui, sans-serif; background: var(--bg); margin: 0; color: var(--text); }
         a { color: var(--link); }
@@ -68,6 +74,9 @@
         main.wide { max-width: 860px; }
         a.button { display: inline-block; padding: .55rem 1.1rem; background: var(--primary-bg); color: var(--primary-text); border-radius: 4px; text-decoration: none; }
         a.button .icon { vertical-align: -3px; margin-right: .35rem; }
+        a.button .icon-birthday { color: var(--button-icon-birthday); }
+        a.button .icon-appointment { color: var(--button-icon-appointment); }
+        a.button .icon-standard { color: var(--button-icon-standard); }
         .title-with-icon .icon { vertical-align: -3px; margin-right: .35rem; }
         .title-with-icon .icon-birthday { color: var(--icon-birthday); }
         .title-with-icon .icon-appointment { color: var(--icon-appointment); }
