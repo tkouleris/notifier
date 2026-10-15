@@ -4,6 +4,10 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    @php($description = trim($__env->yieldContent('description')) ?: 'Never miss a date that matters. Notifier emails you, and up to three other people, before deadlines, appointments and birthdays, with early reminders and birthday cards sent on time.')
+    <meta name="description" content="{{ $description }}">
+    <meta name="keywords" content="email reminders, reminder app, date reminders, deadline reminders, appointment reminders, birthday reminders, birthday cards, scheduled emails, notifications">
+    <meta property="og:description" content="{{ $description }}">
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
     <link rel="icon" href="{{ asset('images/favicon-32.png') }}" type="image/png" sizes="32x32">
     <link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png') }}">
