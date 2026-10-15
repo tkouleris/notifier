@@ -20,7 +20,7 @@ class SendDueReminders extends Command
         $jobs = 0;
 
         ReminderDate::due()
-            ->with(['reminder.recipients'])
+            ->with(['reminder.recipients', 'reminder.participants'])
             ->chunkById(100, function ($chunk) use (&$dates, &$jobs) {
                 foreach ($chunk as $date) {
                     $jobs += $this->dispatchFor($date);
@@ -34,7 +34,8 @@ class SendDueReminders extends Command
     }
 
     /**
-     * Queue a separate job for the owner and for every extra recipient; a birthday
+     * Queue a separate job for the owner and for every extra recipient (or, for an
+     * appointment, every person in it who has an email); a birthday
      * card goes only to the birthday person and next year's is scheduled. The date
      * is marked sent first so it isn't picked up again; if the owner's email (or the
      * birthday card) finally fails, it flips to failed.
@@ -48,11 +49,15 @@ class SendDueReminders extends Command
             $reminder->scheduleNextBirthday($date);
         }
 
+        $others = $reminder->isAppointment()
+            ? $reminder->participants->pluck('email')->filter()
+            : $reminder->recipients->pluck('email');
+
         $jobs = $reminder->isBirthday()
             ? [new SendReminderEmail($date, $reminder->email)]
             : [
                 new SendReminderEmail($date),
-                ...$reminder->recipients->map(fn ($recipient) => new SendReminderEmail($date, $recipient->email)),
+                ...$others->map(fn (string $email) => new SendReminderEmail($date, $email)),
             ];
 
         foreach ($jobs as $job) {

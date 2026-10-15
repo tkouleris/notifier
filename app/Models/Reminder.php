@@ -92,6 +92,14 @@ class Reminder extends Model
     }
 
     /**
+     * The people an appointment is with.
+     */
+    public function participants(): HasMany
+    {
+        return $this->hasMany(AppointmentParticipant::class);
+    }
+
+    /**
      * Every date this reminder is sent on, earliest first; the last one is the final date.
      */
     public function dates(): HasMany
@@ -140,17 +148,20 @@ class Reminder extends Model
     }
 
     /**
-     * Replace an appointment's people; they are emailed like extra recipients.
+     * Replace an appointment's people.
      *
-     * @param  array<int, array{name: string, email: string}>  $people
+     * @param  array<int, array{name: string, email: ?string, phone: ?string}>  $people
      */
     public function syncParticipants(array $people): void
     {
-        $this->recipients()->delete();
-        $this->recipients()->createMany(array_map(fn (array $person) => [
+        $this->participants()->delete();
+        $this->participants()->createMany(array_map(fn (array $person) => [
             'name' => $person['name'],
             'email' => $person['email'],
+            'phone' => $person['phone'],
         ], $people));
+
+        $this->unsetRelation('participants');
     }
 
     /**

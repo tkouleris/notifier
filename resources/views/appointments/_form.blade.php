@@ -14,10 +14,10 @@
 @php
     $selectedMode = old('appointment_mode', $reminder->appointment_mode?->value ?? \App\Enums\AppointmentMode::InPerson->value);
     // Start with one empty row so there is always somewhere to type the first person.
-    $people = collect(old('participants', $reminder->recipients->map->only('name', 'email')->all()))
-        ->filter(fn ($person, $key) => is_array($person) && (filled($person['name'] ?? null) || filled($person['email'] ?? null) || $errors->has("participants.$key.*")));
+    $people = collect(old('participants', $reminder->participants->map->only('name', 'email', 'phone')->all()))
+        ->filter(fn ($person, $key) => is_array($person) && (filled($person['name'] ?? null) || filled($person['email'] ?? null) || filled($person['phone'] ?? null) || $errors->has("participants.$key.*")));
     if ($people->isEmpty()) {
-        $people = collect([['name' => '', 'email' => '']]);
+        $people = collect([['name' => '', 'email' => '', 'phone' => '']]);
     }
     $nextPersonKey = $people->keys()->map(fn ($key) => (int) $key)->max() + 1;
     $maxPeople = \App\Models\Reminder::MAX_PARTICIPANTS;
@@ -63,33 +63,38 @@
 </div>
 
 <fieldset class="optional-list" data-optional-list data-max="{{ $maxPeople }}" data-next-key="{{ $nextPersonKey }}">
-    <legend>With <span class="muted">(up to {{ $maxPeople }} people, each gets the reminders too)</span></legend>
+    <legend>With <span class="muted">(up to {{ $maxPeople }} people; email and phone are optional, and those with an email get the reminders too)</span></legend>
     @error('participants') <div class="error">{{ $message }}</div> @enderror
 
     <div data-rows>
         @foreach ($people as $key => $person)
             <div class="list-row" data-row>
-                <div class="list-row-fields">
+                <div class="person-fields">
                     <label for="participants-{{ $key }}-name" class="visually-hidden">Name</label>
-                    <input id="participants-{{ $key }}-name" type="text" name="participants[{{ $key }}][name]" value="{{ $person['name'] ?? '' }}" maxlength="255" placeholder="Name" autocomplete="off">
-                    <label for="participants-{{ $key }}-email" class="visually-hidden">Email</label>
-                    <input id="participants-{{ $key }}-email" type="email" name="participants[{{ $key }}][email]" value="{{ $person['email'] ?? '' }}" maxlength="255" placeholder="name@example.com" autocomplete="off">
+                    <input id="participants-{{ $key }}-name" class="person-name" type="text" name="participants[{{ $key }}][name]" value="{{ $person['name'] ?? '' }}" maxlength="255" placeholder="Name" autocomplete="off">
                     <button type="button" class="link danger" data-remove>Remove</button>
+                    <label for="participants-{{ $key }}-email" class="visually-hidden">Email (optional)</label>
+                    <input id="participants-{{ $key }}-email" type="email" name="participants[{{ $key }}][email]" value="{{ $person['email'] ?? '' }}" maxlength="255" placeholder="Email (optional)" autocomplete="off">
+                    <label for="participants-{{ $key }}-phone" class="visually-hidden">Phone (optional)</label>
+                    <input id="participants-{{ $key }}-phone" type="tel" name="participants[{{ $key }}][phone]" value="{{ $person['phone'] ?? '' }}" maxlength="50" placeholder="Phone (optional)" autocomplete="off">
                 </div>
                 @error("participants.$key.name") <div class="error">{{ $message }}</div> @enderror
                 @error("participants.$key.email") <div class="error">{{ $message }}</div> @enderror
+                @error("participants.$key.phone") <div class="error">{{ $message }}</div> @enderror
             </div>
         @endforeach
     </div>
 
     <template>
         <div class="list-row" data-row>
-            <div class="list-row-fields">
+            <div class="person-fields">
                 <label for="participants-__KEY__-name" class="visually-hidden">Name</label>
-                <input id="participants-__KEY__-name" type="text" name="participants[__KEY__][name]" value="" maxlength="255" placeholder="Name" autocomplete="off">
-                <label for="participants-__KEY__-email" class="visually-hidden">Email</label>
-                <input id="participants-__KEY__-email" type="email" name="participants[__KEY__][email]" value="" maxlength="255" placeholder="name@example.com" autocomplete="off">
+                <input id="participants-__KEY__-name" class="person-name" type="text" name="participants[__KEY__][name]" value="" maxlength="255" placeholder="Name" autocomplete="off">
                 <button type="button" class="link danger" data-remove>Remove</button>
+                <label for="participants-__KEY__-email" class="visually-hidden">Email (optional)</label>
+                <input id="participants-__KEY__-email" type="email" name="participants[__KEY__][email]" value="" maxlength="255" placeholder="Email (optional)" autocomplete="off">
+                <label for="participants-__KEY__-phone" class="visually-hidden">Phone (optional)</label>
+                <input id="participants-__KEY__-phone" type="tel" name="participants[__KEY__][phone]" value="" maxlength="50" placeholder="Phone (optional)" autocomplete="off">
             </div>
         </div>
     </template>
@@ -121,7 +126,13 @@
         button.secondary { background: none; color: var(--text); border: 1px solid var(--border); }
         .appointment-map { height: 280px; margin: .75rem 0 .25rem; border: 1px solid var(--border); border-radius: 6px; z-index: 0; }
         [data-theme=dark] .appointment-map .leaflet-tile-pane { filter: brightness(.8) contrast(1.1); }
-        @media (max-width: 600px) { .list-row-fields { flex-wrap: wrap; } .list-row-fields input { flex-basis: 100%; } }
+        .person-fields { display: grid; grid-template-columns: 1fr 1fr auto; gap: .5rem .75rem; align-items: center; }
+        .person-fields input { margin-top: 0; min-width: 0; }
+        .person-fields .person-name { grid-column: 1 / 3; }
+        .person-fields input[type=email] { grid-column: 1; }
+        .person-fields input[type=tel] { grid-column: 2; }
+        .list-row + .list-row { padding-top: .5rem; border-top: 1px solid var(--divider); }
+        @media (max-width: 600px) { .person-fields { grid-template-columns: 1fr auto; } .person-fields .person-name { grid-column: 1; } .person-fields input[type=email], .person-fields input[type=tel] { grid-column: 1 / -1; } }
     </style>
 @endpush
 

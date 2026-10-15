@@ -10,7 +10,7 @@ use Illuminate\Validation\Rule;
 
 /**
  * An appointment is scheduled like a standard notification (its time is the final date),
- * plus how it happens and the people it is with, who are emailed instead of extra recipients.
+ * plus how it happens and the people it is with; those with an email are emailed too.
  */
 class AppointmentRequest extends ReminderRequest
 {
@@ -21,15 +21,17 @@ class AppointmentRequest extends ReminderRequest
         $participants = $this->input('participants');
 
         if (is_array($participants)) {
+            // Strings arrive trimmed, with blanks as null (see the global middleware).
             $participants = array_map(fn ($person) => is_array($person) ? [
-                'name' => is_string($person['name'] ?? null) ? trim($person['name']) : ($person['name'] ?? null),
-                'email' => is_string($person['email'] ?? null) ? strtolower(trim($person['email'])) : ($person['email'] ?? null),
+                'name' => $person['name'] ?? null,
+                'email' => is_string($person['email'] ?? null) ? strtolower($person['email']) : ($person['email'] ?? null),
+                'phone' => $person['phone'] ?? null,
             ] : $person, $participants);
 
             // Rows left completely empty are dropped; half-filled ones stay so their error shows.
             $this->merge(['participants' => array_filter(
                 $participants,
-                fn ($person) => ! is_array($person) || filled($person['name']) || filled($person['email'])
+                fn ($person) => ! is_array($person) || filled($person['name']) || filled($person['email']) || filled($person['phone'])
             )]);
         }
     }
@@ -43,13 +45,14 @@ class AppointmentRequest extends ReminderRequest
             'participants.*' => ['array'],
             'participants.*.name' => ['required', 'string', 'max:255'],
             'participants.*.email' => [
-                'required',
+                'nullable',
                 'string',
                 'email',
                 'max:255',
                 'distinct',
                 Rule::notIn([strtolower($this->user()->email)]),
             ],
+            'participants.*.phone' => ['nullable', 'string', 'max:50'],
             'address' => ['nullable', 'required_if:appointment_mode,'.AppointmentMode::InPerson->value, 'string', 'max:255'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
@@ -100,13 +103,14 @@ class AppointmentRequest extends ReminderRequest
     /**
      * The validated people the appointment is with.
      *
-     * @return array<int, array{name: string, email: string}>
+     * @return array<int, array{name: string, email: ?string, phone: ?string}>
      */
     public function participants(): array
     {
-        return array_values(array_map(
-            fn (array $person) => ['name' => $person['name'], 'email' => $person['email']],
-            $this->validated('participants')
-        ));
+        return array_values(array_map(fn (array $person) => [
+            'name' => $person['name'],
+            'email' => $person['email'] ?? null,
+            'phone' => $person['phone'] ?? null,
+        ], $this->validated('participants')));
     }
 }

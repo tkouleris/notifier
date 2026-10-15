@@ -50,7 +50,7 @@
                                     <div class="muted">
                                         📅 {{ $reminder->appointment_mode?->label() ?? 'Appointment' }}
                                         @if ($reminder->address) · {{ \Illuminate\Support\Str::limit($reminder->address, 60) }} @endif
-                                        @if ($reminder->recipients->isNotEmpty()) · with {{ $reminder->recipients->pluck('name')->join(', ') }} @endif
+                                        @if ($reminder->participants->isNotEmpty()) · with {{ $reminder->participants->pluck('name')->join(', ') }} @endif
                                     </div>
                                 @elseif ($reminder->message)
                                     <div class="muted">{{ \Illuminate\Support\Str::limit($reminder->message, 80) }}</div>

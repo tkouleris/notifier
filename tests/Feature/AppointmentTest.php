@@ -36,7 +36,7 @@ class AppointmentTest extends TestCase
             'latitude' => '37.9755000',
             'longitude' => '23.7348000',
             'participants' => [
-                ['name' => 'Maria', 'email' => 'Maria@Example.com '],
+                ['name' => 'Maria', 'email' => 'Maria@Example.com ', 'phone' => '6900000001'],
                 ['name' => 'Nikos', 'email' => 'nikos@example.com'],
             ],
         ];
@@ -45,7 +45,7 @@ class AppointmentTest extends TestCase
     private function appointmentWith(User $owner, array $attributes = []): Reminder
     {
         $reminder = Reminder::factory()->appointment()->for($owner)->create($attributes);
-        $reminder->syncParticipants([['name' => 'Maria', 'email' => 'maria@example.com']]);
+        $reminder->syncParticipants([['name' => 'Maria', 'email' => 'maria@example.com', 'phone' => '6900000001']]);
 
         return $reminder->refresh();
     }
@@ -60,12 +60,15 @@ class AppointmentTest extends TestCase
             ->assertSeeInOrder(['In person', 'Phone call', 'Online'])
             ->assertSee('name="appointment_mode" value="in_person" checked', false)
             ->assertSee('name="participants[0][name]"', false)
+            ->assertSee('name="participants[0][email]"', false)
+            ->assertSee('name="participants[0][phone]"', false)
             ->assertSee('appointment-map', false);
 
         $this->actingAs($user)->get("/notifications/appointments/{$reminder->id}/edit")
             ->assertOk()
             ->assertSee('value="Ermou 10, Athens"', false)
-            ->assertSee('value="maria@example.com"', false);
+            ->assertSee('value="maria@example.com"', false)
+            ->assertSee('value="6900000001"', false);
     }
 
     public function test_an_in_person_appointment_can_be_created(): void
@@ -85,8 +88,28 @@ class AppointmentTest extends TestCase
         $this->assertSame('2026-10-20 18:30:00', $reminder->finalDate->notify_at->toDateTimeString());
         $this->assertCount(2, $reminder->dates);
         $this->assertSame(
-            [['name' => 'Maria', 'email' => 'maria@example.com'], ['name' => 'Nikos', 'email' => 'nikos@example.com']],
-            $reminder->recipients->map->only('name', 'email')->all()
+            [
+                ['name' => 'Maria', 'email' => 'maria@example.com', 'phone' => '6900000001'],
+                ['name' => 'Nikos', 'email' => 'nikos@example.com', 'phone' => null],
+            ],
+            $reminder->participants->map->only('name', 'email', 'phone')->all()
+        );
+        $this->assertSame(0, $reminder->recipients()->count());
+    }
+
+    public function test_a_persons_email_and_phone_are_optional(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post('/notifications/appointments', $this->validData(['participants' => [
+            ['name' => 'Maria', 'email' => '', 'phone' => ''],
+            ['name' => 'Nikos', 'phone' => '6900000002'],
+            ['name' => '', 'email' => '', 'phone' => ''],
+        ]]))->assertSessionHasNoErrors();
+
+        $this->assertSame(
+            [['name' => 'Maria', 'email' => null, 'phone' => null], ['name' => 'Nikos', 'email' => null, 'phone' => '6900000002']],
+            $user->reminders()->sole()->participants->map->only('name', 'email', 'phone')->all()
         );
     }
 
@@ -164,7 +187,8 @@ class AppointmentTest extends TestCase
             ['name' => '', 'email' => 'a@example.com'],
             ['name' => 'Me', 'email' => 'ME@example.com'],
             ['name' => 'B', 'email' => 'a@example.com'],
-        ]]))->assertSessionHasErrors(['participants.0.name', 'participants.1.email', 'participants.2.email']);
+            ['name' => 'C', 'email' => 'not-an-email', 'phone' => str_repeat('1', 51)],
+        ]]))->assertSessionHasErrors(['participants.0.name', 'participants.1.email', 'participants.2.email', 'participants.3.email', 'participants.3.phone']);
 
         $this->assertSame(0, $user->reminders()->count());
     }
@@ -181,7 +205,7 @@ class AppointmentTest extends TestCase
 
         $reminder->refresh();
         $this->assertCount(1, $reminder->dates);
-        $this->assertSame(['eleni@example.com'], $reminder->recipients->pluck('email')->all());
+        $this->assertSame(['Eleni'], $reminder->participants->pluck('name')->all());
     }
 
     public function test_other_users_and_other_kinds_cannot_use_the_appointment_routes(): void
@@ -200,14 +224,15 @@ class AppointmentTest extends TestCase
         ])->assertNotFound();
     }
 
-    public function test_due_dates_are_emailed_to_the_owner_and_each_person(): void
+    public function test_due_dates_are_emailed_to_the_owner_and_each_person_with_an_email(): void
     {
         Notification::fake();
         $owner = User::factory()->create();
         $reminder = $this->appointmentWith($owner);
         $reminder->syncParticipants([
-            ['name' => 'Maria', 'email' => 'maria@example.com'],
-            ['name' => 'Nikos', 'email' => 'nikos@example.com'],
+            ['name' => 'Maria', 'email' => 'maria@example.com', 'phone' => null],
+            ['name' => 'Nikos', 'email' => 'nikos@example.com', 'phone' => '6900000002'],
+            ['name' => 'Eleni', 'email' => null, 'phone' => '6900000003'],
         ]);
         $this->travel(2)->days();
 
@@ -235,7 +260,7 @@ class AppointmentTest extends TestCase
         $this->assertStringContainsString('openstreetmap.org/?mlat=37.9755&mlon=23.7348', $mail->actionUrl);
 
         $ownerMail = (new ReminderDue($reminder->finalDate))->toMail($owner);
-        $this->assertContains('With: Maria', $ownerMail->introLines);
+        $this->assertContains('With: Maria (6900000001)', $ownerMail->introLines);
         $this->assertSame('Open map', $ownerMail->actionText);
         $this->assertStringContainsString('View your notifications', implode(' ', $ownerMail->outroLines));
     }

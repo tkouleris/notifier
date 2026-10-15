@@ -11,8 +11,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
- * Appointments: a meeting with other people, in person, by phone or online. Everyone
- * is emailed on its dates. Listing and deleting go through ReminderController.
+ * Appointments: a meeting with other people, in person, by phone or online. The owner
+ * and everyone with an email are emailed on its dates. Listing and deleting go through
+ * ReminderController.
  */
 class AppointmentController extends Controller
 {
@@ -40,7 +41,7 @@ class AppointmentController extends Controller
         $this->authorize('update', $reminder);
         abort_unless($reminder->isAppointment(), 404);
 
-        $reminder->load('dates', 'recipients');
+        $reminder->load('dates', 'participants');
 
         return view('appointments.edit', compact('reminder'));
     }

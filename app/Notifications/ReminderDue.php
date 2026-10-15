@@ -81,13 +81,14 @@ class ReminderDue extends Notification
 
         if ($isOwner) {
             $mail->greeting('Hello '.$notifiable->name.',');
-            $with = $reminder->recipients->pluck('name');
+            // The owner sees each person's phone, to call them if needed.
+            $with = $reminder->participants->map(fn ($person) => $person->phone ? $person->name.' ('.$person->phone.')' : $person->name);
         } else {
             $email = $notifiable->routes['mail'] ?? null;
-            $person = $reminder->recipients->firstWhere('email', $email);
-            $mail->greeting($person?->name ? 'Hello '.$person->name.',' : 'Hello,')
+            $person = $reminder->participants->firstWhere('email', $email);
+            $mail->greeting($person ? 'Hello '.$person->name.',' : 'Hello,')
                 ->line($owner->name.' has an appointment with you.');
-            $with = $reminder->recipients->reject(fn ($recipient) => $recipient->email === $email)
+            $with = $reminder->participants->reject(fn ($other) => $other->email === $email)
                 ->pluck('name')
                 ->prepend($owner->name);
         }
