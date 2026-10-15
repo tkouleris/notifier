@@ -281,7 +281,7 @@ class BirthdayTest extends TestCase
 
         $this->actingAs($user)->get('/notifications')
             ->assertOk()
-            ->assertSee('New birthday')
+            ->assertSee('/notifications/birthdays/create')
             ->assertSee('Maria')
             ->assertSeeInOrder(['Birthday', 'March 15, 1990'])
             ->assertSee('maria@example.com')

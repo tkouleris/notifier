@@ -120,7 +120,7 @@ class AppointmentTest extends TestCase
 
         $this->actingAs($user)->get('/notifications')
             ->assertOk()
-            ->assertSee('New appointment')
+            ->assertSee('/notifications/appointments/create')
             ->assertSee('In person')
             ->assertSee('with Maria')
             ->assertSee("/notifications/appointments/{$reminder->id}/edit");

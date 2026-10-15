@@ -61,6 +61,7 @@
         .muted { color: var(--muted); font-size: .9rem; }
         main.wide { max-width: 860px; }
         a.button { display: inline-block; padding: .55rem 1.1rem; background: var(--primary-bg); color: var(--primary-text); border-radius: 4px; text-decoration: none; }
+        a.button .icon { vertical-align: -3px; margin-right: .35rem; }
         button.link { margin: 0; padding: 0; background: none; color: var(--link); font: inherit; }
         button.link.danger { color: var(--danger); }
         .header { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
