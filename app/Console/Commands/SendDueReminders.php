@@ -36,7 +36,8 @@ class SendDueReminders extends Command
     /**
      * Queue a separate job for the owner and for every extra recipient (or, for an
      * appointment, every person in it who has an email); a birthday
-     * card goes only to the birthday person and next year's is scheduled. The date
+     * card goes only to the birthday person and next year's is scheduled, and a
+     * repeating notification's final date schedules its next occurrence. The date
      * is marked sent first so it isn't picked up again; if the owner's email (or the
      * birthday card) finally fails, it flips to failed.
      */
@@ -47,6 +48,8 @@ class SendDueReminders extends Command
 
         if ($reminder->isBirthday()) {
             $reminder->scheduleNextBirthday($date);
+        } elseif ($reminder->repeats() && $date->is_final) {
+            $reminder->scheduleNextOccurrence($date);
         }
 
         $others = $reminder->isAppointment()

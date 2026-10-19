@@ -4,9 +4,11 @@ namespace App\Models;
 
 use App\Enums\AppointmentMode;
 use App\Enums\BirthdayLayout;
+use App\Enums\OffsetUnit;
 use App\Enums\ReminderChannel;
 use App\Enums\ReminderStatus;
 use App\Enums\ReminderType;
+use App\Enums\Repeat;
 use App\Enums\Theme;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -59,6 +61,9 @@ class Reminder extends Model
         'timezone',
         'channel',
         'email_theme',
+        'repeat',
+        'repeat_anchor',
+        'reminder_offsets',
     ];
 
     protected $attributes = [
@@ -79,6 +84,8 @@ class Reminder extends Model
         'appointment_mode' => AppointmentMode::class,
         'latitude' => 'float',
         'longitude' => 'float',
+        'repeat' => Repeat::class,
+        'reminder_offsets' => 'array',
     ];
 
     public function user(): BelongsTo
@@ -107,9 +114,12 @@ class Reminder extends Model
         return $this->hasMany(ReminderDate::class)->orderBy('notify_at');
     }
 
+    /**
+     * The latest final date: birthdays and repeating notifications also keep the last one sent.
+     */
     public function finalDate(): HasOne
     {
-        return $this->hasOne(ReminderDate::class)->where('is_final', true);
+        return $this->hasOne(ReminderDate::class)->ofMany(['notify_at' => 'max'], fn ($query) => $query->where('is_final', true));
     }
 
     /**
@@ -191,6 +201,61 @@ class Reminder extends Model
         return $this->type === ReminderType::Appointment;
     }
 
+    public function repeats(): bool
+    {
+        return $this->repeat !== null;
+    }
+
+    /**
+     * The first occurrence of a repeating notification after the given time, in UTC.
+     */
+    public function occurrenceAfter(Carbon $after): Carbon
+    {
+        $first = Carbon::createFromFormat('Y-m-d H:i', $this->repeat_anchor, $this->timezone)->second(0);
+        $n = 0;
+
+        do {
+            $date = $this->repeat->occurrence($first, $n++)->utc();
+        } while (! $date->gt($after));
+
+        return $date;
+    }
+
+    /**
+     * A repeating notification's reminders before the given occurrence, in UTC, earliest
+     * first; any already in the past are left out.
+     *
+     * @return array<int, Carbon>
+     */
+    public function offsetDates(Carbon $final): array
+    {
+        $local = $final->copy()->setTimezone($this->timezone);
+
+        return collect($this->reminder_offsets ?? [])
+            ->map(fn (array $offset) => OffsetUnit::from($offset['unit'])->subtractFrom($local, $offset['amount'])->utc())
+            ->filter->isFuture()
+            ->sort()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * After a repeating notification's final date goes out, schedule the next occurrence
+     * and its reminders, keeping only the final date just sent as history.
+     */
+    public function scheduleNextOccurrence(ReminderDate $sent): void
+    {
+        $this->deleteHistoryExcept($sent);
+
+        $next = $this->occurrenceAfter($sent->notify_at);
+        $this->dates()->createMany([
+            ...array_map(fn (Carbon $date) => ['notify_at' => $date], $this->offsetDates($next)),
+            ['notify_at' => $next, 'is_final' => true],
+        ]);
+
+        $this->unsetRelation('dates')->unsetRelation('finalDate');
+    }
+
     /**
      * An OpenStreetMap link to an in-person appointment's place: the point picked
      * on the map, or else a search for the typed address.
@@ -245,10 +310,15 @@ class Reminder extends Model
      */
     public function scheduleNextBirthday(ReminderDate $sent): void
     {
-        $this->dates()->whereKeyNot($sent->getKey())->where('status', '!=', ReminderStatus::Pending)->delete();
+        $this->deleteHistoryExcept($sent);
         $this->dates()->create(['notify_at' => $this->nextBirthday($sent->notify_at), 'is_final' => true]);
 
         $this->unsetRelation('dates')->unsetRelation('finalDate');
+    }
+
+    private function deleteHistoryExcept(ReminderDate $sent): void
+    {
+        $this->dates()->whereKeyNot($sent->getKey())->where('status', '!=', ReminderStatus::Pending)->delete();
     }
 
     private function birthdayIn(int $year): Carbon

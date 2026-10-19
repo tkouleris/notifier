@@ -64,8 +64,13 @@
                                         @if ($reminder->address) · {{ \Illuminate\Support\Str::limit($reminder->address, 60) }} @endif
                                         @if ($reminder->participants->isNotEmpty()) · with {{ $reminder->participants->pluck('name')->join(', ') }} @endif
                                     </div>
-                                @elseif ($reminder->message)
-                                    <div class="muted">{{ \Illuminate\Support\Str::limit($reminder->message, 80) }}</div>
+                                @else
+                                    @if ($reminder->repeats())
+                                        <div class="muted">{{ $reminder->repeat->label() }}</div>
+                                    @endif
+                                    @if ($reminder->message)
+                                        <div class="muted">{{ \Illuminate\Support\Str::limit($reminder->message, 80) }}</div>
+                                    @endif
                                 @endif
                             </td>
                             <td class="dates">

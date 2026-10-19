@@ -9,6 +9,7 @@ use App\Models\ReminderDate;
 use App\Models\User;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Carbon;
 
 class ReminderDue extends Notification
 {
@@ -54,6 +55,9 @@ class ReminderDue extends Notification
 
         if (! $this->date->is_final) {
             $mail->line('This is an early reminder. The final date is '.$this->finalDateText().'.');
+        } elseif ($this->reminder->repeats()) {
+            $mail->line('This notification repeats '.lcfirst($this->reminder->repeat->label()).'; the next one is on '
+                .$this->localText($this->reminder->occurrenceAfter($this->date->notify_at)).'.');
         }
 
         if ($this->reminder->message) {
@@ -183,10 +187,14 @@ class ReminderDue extends Notification
 
     private function finalDateText(): string
     {
+        return $this->localText($this->reminder->finalDate->notify_at);
+    }
+
+    private function localText(Carbon $time): string
+    {
         // Shown in the owner's timezone, the one the dates were picked in.
         $owner = $this->reminder->user;
 
-        return $owner->toLocal($this->reminder->finalDate->notify_at)->format('l, F j, Y \a\t H:i')
-            .' ('.$owner->timezone.')';
+        return $owner->toLocal($time)->format('l, F j, Y \a\t H:i').' ('.$owner->timezone.')';
     }
 }

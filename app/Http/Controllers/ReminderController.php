@@ -38,14 +38,14 @@ class ReminderController extends Controller
 
     public function create(): View
     {
-        return view('reminders.create', ['reminder' => new Reminder()]);
+        return view('reminders.create', ['reminder' => new Reminder]);
     }
 
     public function store(ReminderRequest $request): RedirectResponse
     {
         DB::transaction(function () use ($request) {
             $reminder = $request->user()->reminders()->create($request->reminderData());
-            $reminder->syncDates($request->finalDate(), $request->earlyDates());
+            $this->syncDates($reminder, $request);
             $reminder->syncRecipients($request->recipientEmails());
         });
 
@@ -77,11 +77,22 @@ class ReminderController extends Controller
         // Saving replaces the whole schedule; every date (all in the future, per validation) is pending again.
         DB::transaction(function () use ($request, $reminder) {
             $reminder->update($request->reminderData());
-            $reminder->syncDates($request->finalDate(), $request->earlyDates());
+            $this->syncDates($reminder, $request);
             $reminder->syncRecipients($request->recipientEmails());
         });
 
         return redirect()->route('reminders.index')->with('status', 'Notification updated.');
+    }
+
+    /**
+     * A repeating notification's reminders are counted back from its first occurrence;
+     * otherwise they are the fixed dates entered.
+     */
+    private function syncDates(Reminder $reminder, ReminderRequest $request): void
+    {
+        $final = $request->finalDate();
+
+        $reminder->syncDates($final, $reminder->repeats() ? $reminder->offsetDates($final) : $request->earlyDates());
     }
 
     /**

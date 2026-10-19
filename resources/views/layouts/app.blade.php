@@ -106,6 +106,8 @@
         .list-row { margin-top: .5rem; }
         .list-row-fields { display: flex; gap: .75rem; align-items: center; }
         .list-row-fields input { margin-top: 0; flex: 1; min-width: 0; }
+        .list-row-fields .offset-amount { flex: 0 0 6em; }
+        .list-row-fields select { margin-top: 0; width: auto; flex: 1; }
         button.add-row { margin-top: .5rem; }
         button[hidden] { display: none; }
         .date-parts { display: grid; grid-template-columns: 1fr 2fr 1.2fr; gap: .75rem; }

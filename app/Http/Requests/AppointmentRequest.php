@@ -36,10 +36,18 @@ class AppointmentRequest extends ReminderRequest
         }
     }
 
+    protected function repeating(): bool
+    {
+        return false;
+    }
+
     public function rules(): array
     {
         return [
-            ...Arr::except(parent::rules(), ['recipients', 'recipients.*']),
+            ...Arr::except(parent::rules(), [
+                'recipients', 'recipients.*',
+                'repeat', 'reminder_offsets', 'reminder_offsets.*', 'reminder_offsets.*.amount', 'reminder_offsets.*.unit',
+            ]),
             'appointment_mode' => ['required', Rule::enum(AppointmentMode::class)],
             'participants' => ['required', 'array', 'max:'.Reminder::MAX_PARTICIPANTS],
             'participants.*' => ['array'],

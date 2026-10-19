@@ -6,12 +6,13 @@ use App\Enums\AppointmentMode;
 use App\Enums\BirthdayLayout;
 use App\Enums\ReminderChannel;
 use App\Enums\ReminderType;
+use App\Enums\Repeat;
 use App\Models\Reminder;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Reminder>
+ * @extends Factory<Reminder>
  */
 class ReminderFactory extends Factory
 {
@@ -48,6 +49,18 @@ class ReminderFactory extends Factory
             'address' => 'Ermou 10, Athens',
             'latitude' => 37.9755,
             'longitude' => 23.7348,
+        ]);
+    }
+
+    /**
+     * Repeats from the given local time, with reminders like ['amount' => 2, 'unit' => 'day'].
+     */
+    public function repeating(Repeat $repeat, string $firstAt, array $offsets = []): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'repeat' => $repeat,
+            'repeat_anchor' => $firstAt,
+            'reminder_offsets' => $offsets,
         ]);
     }
 

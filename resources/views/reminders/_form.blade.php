@@ -8,7 +8,7 @@
 <textarea id="message" name="message" rows="4" maxlength="5000">{{ old('message', $reminder->message) }}</textarea>
 @error('message') <div class="error">{{ $message }}</div> @enderror
 
-@include('reminders._schedule')
+@include('reminders._schedule', ['repeatable' => true])
 
 <label for="channel">Notify me by</label>
 <select id="channel" name="channel" required>
