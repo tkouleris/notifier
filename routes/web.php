@@ -18,18 +18,6 @@ use Illuminate\Support\Facades\Route;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
-use Illuminate\Support\Facades\Mail;
-
-Route::get('/test-mail', function () {
-
-    Mail::raw('Test email from Laravel + Mailgun', function ($message) {
-        $message
-            ->to('tkouleris@gmail.com')
-            ->subject('Laravel Mailgun Test');
-    });
-
-    return 'Email sent!';
-});
 
 // Logged-in users skip the landing page and go straight to their notifications.
 Route::get('/', function () {
