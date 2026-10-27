@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Notifier is a Laravel 12 (PHP 8.2+) app that emails users (and up to 3 extra addresses) before dates that matter. UI is server-rendered Blade with plain inline CSS/JS — there is no frontend build step; `package.json`/Vite are unused Laravel scaffolding.
+Notifier is a Laravel 12 (PHP 8.2+) app that emails users (and up to 3 extra addresses) before dates that matter. UI is server-rendered Blade with plain inline CSS/JS — there is no frontend build step (no `package.json`/Vite).
 
 ## Commands
 
