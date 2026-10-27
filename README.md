@@ -10,17 +10,22 @@ and Notifier sends each email on time, in your timezone.
 
 ## Features
 
+- **Three kinds of notification**: a plain **notification**, a yearly **birthday** card, and an **appointment** with people and a place.
 - **Final date plus early reminders**: every notification has a final date and up to 4 optional reminders before it.
+- **Repeating notifications**: a notification can repeat every week, month or year. Its reminders are set as "3 days before", "1 week before" and so on, and after each occurrence the next one is scheduled automatically. Month ends don't drift (Jan 31 → Feb 28 → Mar 31), and occurrences missed while the app was down are skipped instead of all being sent at once.
+- **Birthday cards**: enter a name, an email address and the birthday (the year is optional). Every year at 09:00 in your timezone the person gets a card, signed with the name you choose (or yours). Pick one of three card layouts (balloons, confetti, cake) and preview it before saving.
+- **Appointments**: meeting in person, by phone or online. In person, pick the place on an OpenStreetMap map or type the address; by phone or online, add the number or meeting link. Add up to 5 people with optional email and phone; those with an email get the reminders too.
 - **Notify other people**: add up to 3 extra email addresses per notification. They don't need an account, and the email tells them who asked for the reminder.
 - **Your timezone**: you pick your timezone in Settings, and all dates are entered and shown in it. If you change it, notifications not yet sent keep their clock time (09:30 stays 09:30 in the new timezone).
 - **Reliable delivery**: each email goes out as its own queued job and is retried up to 3 times, so one failing address doesn't block the others.
 - **Status tracking**: every date shows whether it is *pending*, *sent* or *failed*.
 - **Accounts**: registration with email verification, plus a profile page to change your username, password and optional birthday.
+- **Branded emails** with a light or dark theme, chosen per notification and previewable before saving.
 - **Light and dark mode**, saved per user.
 
 ## Requirements
 
-- PHP 8.1 or newer with the usual Laravel extensions (`mbstring`, `openssl`, `pdo`, `tokenizer`, `xml`, `ctype`, `json`, `bcmath`)
+- PHP 8.2 or newer with the usual Laravel extensions (`mbstring`, `openssl`, `pdo`, `tokenizer`, `xml`, `ctype`, `json`, `bcmath`)
 - [Composer](https://getcomposer.org/)
 - A database: MySQL / MariaDB (the default in `.env.example`), PostgreSQL or SQLite
 - A mail service: any SMTP server, or Mailgun (the Mailgun mailer is already installed)
@@ -117,6 +122,13 @@ You can also send due reminders once by hand:
 
 ```bash
 php artisan reminders:send
+```
+
+To check that email works, send a notification's final email (or birthday card) to its owner
+right away. Use the notification's ID; nothing is sent to anyone else and no status changes:
+
+```bash
+php artisan reminders:test 12
 ```
 
 ### 2. Run a queue worker (recommended)
@@ -238,18 +250,28 @@ Use either cron or this program, not both. Running both would start the schedule
 
 1. **Sign up and verify your email.** Your timezone is taken from your browser when you register.
 2. **Check your timezone** under **Settings**. Every date you enter is read in this timezone.
-3. **Create a notification** from **Notifications → New notification**:
+3. **Create a notification** with the **Notification** button on the Notifications page:
    - **Title** and an optional **message**, which are included in the email.
+   - **Repeat** *(optional)*: every week, month or year. The final date is then the first occurrence.
    - **Final date**: the date and time of the event itself.
    - **Reminders before the final date** *(optional)*: press **+ Add reminder** for up to 4 earlier emails, for example a week and a day before.
+     For a repeating notification, you set them as an amount of days, weeks or months before each occurrence instead.
    - **Notify me by**: the delivery channel (email).
    - **Also notify** *(optional)*: press **+ Add person** to add up to 3 more email addresses.
-4. **Follow progress** on the Notifications list. Each date shows its status, and the notification
+   - **Email theme**: light or dark, with a preview link.
+4. **Or create a birthday** with the **Birthday** button: the person's **name** and **email**, the
+   **day** and **month** (and optionally the **year**, to show their age), an optional **personal
+   message**, the **From** name the card is signed with, and the **card layout**. The card goes only
+   to the birthday person, every year.
+5. **Or create an appointment** with the **Appointment** button: a **title**, the **appointment
+   date** and reminders before it, **how you'll meet** (in person with an address on the map, phone
+   call, or online with a meeting link), the people **with** you, and optional **notes**.
+6. **Follow progress** on the Notifications list. Each date shows its status, and the notification
    as a whole shows *failed* if any date failed, *pending* while any date is still to come, and
    *sent* when everything has gone out.
-5. **Edit or delete** a notification at any time. Saving replaces the whole schedule with the
+7. **Edit or delete** a notification at any time. Saving replaces the whole schedule with the
    dates in the form. Dates that were already sent are not shown and are not sent again.
-6. **Profile** lets you change your username, birthday and password (your current password is
+8. **Profile** lets you change your username, birthday and password (your current password is
    required). The theme switch in the navbar toggles light and dark mode.
 
 ### Example
@@ -271,8 +293,9 @@ setup and send no real email.
 
 ## Built with
 
-- [Laravel 10](https://laravel.com/)
+- [Laravel 12](https://laravel.com/)
 - Blade templates with plain CSS
+- [Leaflet](https://leafletjs.com/) with [OpenStreetMap](https://www.openstreetmap.org/) for the appointment map
 
 ## License
 
