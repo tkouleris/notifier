@@ -319,6 +319,19 @@ class BirthdayTest extends TestCase
         );
     }
 
+    public function test_a_card_sent_more_than_a_year_late_schedules_the_next_one_in_the_future(): void
+    {
+        Queue::fake();
+        $this->travelTo(Carbon::parse('2027-03-15 08:00', 'UTC'));
+        $reminder = Reminder::factory()->birthday()->create(['email' => 'maria@example.com']);
+
+        $this->travelTo(Carbon::parse('2028-06-01 12:00', 'UTC'));
+        $this->artisan('reminders:send')->assertSuccessful();
+
+        Queue::assertPushed(SendReminderEmail::class, 1);
+        $this->assertTrue($reminder->fresh()->finalDate->notify_at->eq(Carbon::parse('2029-03-15 09:00', 'UTC')));
+    }
+
     public function test_a_card_that_finally_fails_marks_its_date_failed(): void
     {
         $reminder = Reminder::factory()->birthday()->create(['email' => 'maria@example.com']);

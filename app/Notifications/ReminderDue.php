@@ -57,7 +57,7 @@ class ReminderDue extends Notification
             $mail->line('This is an early reminder. The final date is '.$this->finalDateText().'.');
         } elseif ($this->reminder->repeats()) {
             $mail->line('This notification repeats '.lcfirst($this->reminder->repeat->label()).'; the next one is on '
-                .$this->localText($this->reminder->occurrenceAfter($this->date->notify_at)).'.');
+                .$this->localText($this->reminder->occurrenceAfter($this->date->notify_at->max(now()))).'.');
         }
 
         if ($this->reminder->message) {

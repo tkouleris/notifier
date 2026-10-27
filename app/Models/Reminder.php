@@ -241,13 +241,14 @@ class Reminder extends Model
 
     /**
      * After a repeating notification's final date goes out, schedule the next occurrence
-     * and its reminders, keeping only the final date just sent as history.
+     * and its reminders, keeping only the final date just sent as history. Occurrences
+     * missed while nothing was sending are skipped, so they don't all go out at once.
      */
     public function scheduleNextOccurrence(ReminderDate $sent): void
     {
         $this->deleteHistoryExcept($sent);
 
-        $next = $this->occurrenceAfter($sent->notify_at);
+        $next = $this->occurrenceAfter($sent->notify_at->max(now()));
         $this->dates()->createMany([
             ...array_map(fn (Carbon $date) => ['notify_at' => $date], $this->offsetDates($next)),
             ['notify_at' => $next, 'is_final' => true],
@@ -306,12 +307,13 @@ class Reminder extends Model
 
     /**
      * After a birthday card goes out, schedule next year's and drop older history,
-     * keeping only the card just sent and the next one.
+     * keeping only the card just sent and the next one; a card sent late never schedules
+     * one that is already past.
      */
     public function scheduleNextBirthday(ReminderDate $sent): void
     {
         $this->deleteHistoryExcept($sent);
-        $this->dates()->create(['notify_at' => $this->nextBirthday($sent->notify_at), 'is_final' => true]);
+        $this->dates()->create(['notify_at' => $this->nextBirthday($sent->notify_at->max(now())), 'is_final' => true]);
 
         $this->unsetRelation('dates')->unsetRelation('finalDate');
     }

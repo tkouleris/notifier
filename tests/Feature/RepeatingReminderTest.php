@@ -185,6 +185,26 @@ class RepeatingReminderTest extends TestCase
         Notification::assertSentTimes(ReminderDue::class, 4);
     }
 
+    public function test_occurrences_missed_while_nothing_was_sending_are_skipped(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create();
+        $this->actingAs($user)->post('/notifications', $this->validData())->assertSessionHasNoErrors();
+        $reminder = $user->reminders()->sole();
+
+        // Three weeks without the scheduler: only the overdue dates already stored go out.
+        $this->travelTo(Carbon::parse('2026-11-15 12:00', 'UTC'));
+        $this->artisan('reminders:send')->assertSuccessful();
+
+        $this->assertSame([
+            ['2026-10-23 18:00', true, 'sent'],
+            ['2026-11-18 18:00', false, 'pending'],
+            ['2026-11-19 18:00', false, 'pending'],
+            ['2026-11-20 18:00', true, 'pending'],
+        ], $this->schedule($reminder));
+        Notification::assertSentTimes(ReminderDue::class, 3);
+    }
+
     public function test_emails_show_the_upcoming_date_and_the_next_occurrence(): void
     {
         $owner = User::factory()->create(['timezone' => 'Europe/Athens']);
