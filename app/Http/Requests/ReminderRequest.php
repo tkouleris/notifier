@@ -117,6 +117,11 @@ class ReminderRequest extends FormRequest
                 return;
             }
 
+            // Not a list at all (already reported), so there is nothing to check item by item.
+            if ($validator->errors()->has('reminder_dates')) {
+                return;
+            }
+
             foreach ($this->input('reminder_dates', []) as $key => $value) {
                 if ($validator->errors()->has("reminder_dates.$key")) {
                     continue;
@@ -140,7 +145,7 @@ class ReminderRequest extends FormRequest
     {
         $repeat = Repeat::tryFrom($this->input('repeat'));
 
-        if (! $repeat) {
+        if (! $repeat || $validator->errors()->has('reminder_offsets')) {
             return;
         }
 

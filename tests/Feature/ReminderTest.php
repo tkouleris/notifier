@@ -241,6 +241,18 @@ class ReminderTest extends TestCase
         $this->assertDatabaseCount('reminders', 0);
     }
 
+    public function test_reminders_that_are_not_a_list_are_rejected(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post('/notifications', $this->validData(['reminder_dates' => 'not a list']))
+            ->assertSessionHasErrors('reminder_dates');
+        $this->actingAs($user)->post('/notifications', $this->validData(['repeat' => 'weekly', 'reminder_offsets' => 'not a list']))
+            ->assertSessionHasErrors('reminder_offsets');
+
+        $this->assertDatabaseCount('reminders', 0);
+    }
+
     public function test_more_than_four_reminders_or_duplicates_are_rejected(): void
     {
         $user = User::factory()->create();
